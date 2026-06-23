@@ -1,28 +1,28 @@
-# LLM Wiki — Tutorial para Iniciantes
-### Como Construir sua Base de Conhecimento de Pesquisa com Inteligência Artificial, Passo a Passo
+# LLM Wiki — Beginner Tutorial
+### How to Build Your Personal AI-Powered Research Knowledge Base, Step by Step
 
 ---
 
-Bem-vindo! Este tutorial vai te guiar pela configuração do seu próprio **LLM Wiki** — uma base de conhecimento pessoal onde um assistente de IA te ajuda a organizar, conectar e explorar sua pesquisa. Nenhum conhecimento de programação é necessário.
+Welcome! This tutorial will walk you through setting up your own **LLM Wiki** — a personal knowledge base where an AI assistant helps you organize, connect, and explore your research. No coding experience required.
 
-Ao final deste tutorial, você terá uma pasta de wiki funcionando no seu computador, pronta para começar a ingerir artigos de pesquisa.
+By the end of this tutorial you will have a working wiki folder on your computer, ready to start ingesting research papers.
 
 ---
 
-## O Que Você Vai Ter no Final
+## What You'll End Up With
 
-Após seguir esses passos, a pasta do seu projeto vai ficar assim:
+After following these steps, your project folder will look like this:
 
 ```
-minha-wiki-de-pesquisa/
-├── AGENTS.md               ← Instruções para a IA
-├── raw/                    ← Onde VOCÊ coloca seus PDFs e anotações
+my-research-wiki/
+├── AGENTS.md               ← Instructions for the AI
+├── raw/                    ← Where YOU put your PDFs and notes
 │   ├── papers/
 │   ├── notes/
 │   ├── books/
 │   ├── code/
 │   └── repos/
-└── wiki/                   ← Onde a IA escreve tudo
+└── wiki/                   ← Where the AI writes everything
     ├── index.md
     ├── log.md
     ├── overview.md
@@ -34,217 +34,217 @@ minha-wiki-de-pesquisa/
     └── reviews/
 ```
 
-**A regra de ouro:** Você adiciona coisas em `raw/`. A IA escreve em `wiki/`. Nunca deixe esses papéis se inverterem.
+**The golden rule:** You add things to `raw/`. The AI writes to `wiki/`. Never let those roles switch.
 
 ---
 
-## Antes de Começar
+## Before You Start
 
-Você precisa de:
-- **Um assistente de IA** que consiga ler e escrever arquivos no seu computador. Exemplos: Claude Code, Gemini Antigravity, ou qualquer configuração de IA agêntica.
-- **Alguns artigos de pesquisa** em formato PDF (mesmo 1 já é suficiente para começar).
-- **10 minutos** para concluir esta configuração.
+You need:
+- **An AI assistant** that can read and write files on your computer. Examples: Claude Code, Gemini Antigravity, or any agentic AI setup.
+- **A few research papers** in PDF format (even 1 is enough to start).
+- **10 minutes** to complete this setup.
 
-É isso. Você não precisa saber programar.
-
----
-
-## Passo 1 — Carregue as Instruções de Configuração no seu Assistente de IA
-
-Antes de pedir qualquer coisa à IA, você precisa dar a ela as instruções de configuração. A IA não tem ideia do que é um LLM Wiki por padrão — o `prompt.md` é o roteiro que ela precisa seguir.
-
-**Veja como fazer:**
-
-1. Abra o arquivo `prompt.md` (ele está na mesma pasta que este tutorial)
-2. Selecione todo o texto e copie (`Ctrl+A`, depois `Ctrl+C`)
-3. Abra seu assistente de IA e **cole o texto copiado como sua primeira mensagem**
-4. Envie
-
-A IA agora saberá exatamente o que fazer. Ela iniciará a entrevista (Passo 2) automaticamente.
-
-✅ **Concluído quando:** Você colou o `prompt.md` na IA e ela confirmou que está pronta para configurar sua wiki.
+That's it. You do not need to know how to code.
 
 ---
 
-## Passo 2 — Responda às Perguntas da IA
+## Step 1 — Load the Setup Instructions into Your AI Assistant
 
-Após receber as instruções, a IA vai te fazer 5 perguntas. Elas ajudam a configurar a wiki para a sua pesquisa específica. Responda com calma — respostas aproximadas estão ótimas.
+Before asking the AI to do anything, you need to give it the setup instructions. The AI has no idea what an LLM Wiki is by default — `prompt.md` is the script it needs to follow.
 
-**As 5 perguntas:**
+**Here's how:**
 
-1. **Qual é o seu tema de pesquisa?**
-   *Exemplo: "Estudo aprendizado de máquina para predição de estrutura de proteínas."*
+1. Open the file `prompt.md` (it's in the same folder as this tutorial)
+2. Select all the text and copy it (`Ctrl+A`, then `Ctrl+C`)
+3. Open your AI assistant and **paste the copied text as your first message**
+4. Send it
 
-2. **Qual é a sua hipótese ou pergunta central de pesquisa?**
-   *Exemplo: "Estou explorando se redes neurais de grafos conseguem superar métodos tradicionais para predição de dobramento de proteínas."*
-   *Dica: Mesmo uma resposta incerta e aproximada está ótima. Você pode atualizar depois.*
+The AI will now know exactly what to do. It will start the interview (Step 2) automatically.
 
-3. **Quais são as 3–5 grandes questões abertas que você está tentando responder?**
-   *Exemplo: "Conseguimos reduzir o custo computacional? A equivariância importa? Como lidar com regiões desordenadas?"*
-
-4. **Você precisa de categorias de pastas extras além dos padrões?**
-   *Os padrões são: Papers, Concepts, Models, Authors, Reviews.*
-   *Você pode adicionar: `datasets/`, `experiments/`, `methods/`, `clinical_trials/`.*
-   *Se não tiver certeza, diga "não, os padrões estão ótimos."*
-
-5. **Há campos especiais que você quer rastrear para cada artigo?**
-   *Exemplo para ML: "Quero rastrear se o código está disponível e qual benchmark foi usado."*
-   *Se não souber, diga "use os padrões."*
-
-✅ **Concluído quando:** Você respondeu todas as 5 perguntas e a IA confirmou que entendeu suas respostas.
+✅ **Done when:** You've pasted `prompt.md` into the AI and it has acknowledged it's ready to set up your wiki.
 
 ---
 
-## Passo 3 — Confirme o Plano
+## Step 2 — Answer the AI's Questions
 
-A IA vai te mostrar um resumo do que está prestes a criar, parecido com isto:
+After receiving the instructions, the AI will ask you 5 questions. These help it configure the wiki for your specific research. Take your time answering them — even rough answers are fine.
 
-> **Aqui está o que vou criar:**
+**The 5 questions:**
+
+1. **What is your research topic?**
+   *Example: "I study machine learning for protein structure prediction."*
+
+2. **What is your thesis statement or main research question?**
+   *Example: "I'm exploring whether graph neural networks can outperform traditional methods for predicting protein folding."*
+   *Tip: Even a rough, uncertain answer is fine. You can update this later.*
+
+3. **What are 3–5 big open questions you're trying to answer?**
+   *Example: "Can we reduce compute costs? Does equivariance matter? How do we handle disordered regions?"*
+
+4. **Do you need any extra folder categories beyond the defaults?**
+   *Defaults are: Papers, Concepts, Models, Authors, Reviews.*
+   *You might add: `datasets/`, `experiments/`, `methods/`, `clinical_trials/`.*
+   *If you're not sure, just say "no, the defaults are fine."*
+
+5. **Any special fields you want tracked for each paper?**
+   *Example for ML: "I want to track whether code is available and what benchmark was used."*
+   *If unsure, say "use the defaults."*
+
+✅ **Done when:** You've answered all 5 questions and the AI has confirmed it understood your answers.
+
+---
+
+## Step 3 — Confirm the Plan
+
+The AI will show you a summary of what it's about to create, looking something like this:
+
+> **Here's what I'll create:**
 > ```
-> minha-wiki-de-pesquisa/
-> ├── raw/   (seus PDFs ficam aqui)
-> └── wiki/  (a IA escreve aqui)
+> my-research-wiki/
+> ├── raw/   (your PDFs go here)
+> └── wiki/  (the AI writes here)
 >     └── index.md, log.md, overview.md, schema.md
 > ```
-> Wiki configurada para: **[seu tema de pesquisa]**
-> Posso prosseguir?
+> Wiki configured for: **[your research topic]**
+> Shall I proceed?
 
-Leia rapidamente e responda **"Sim, pode continuar"** (ou peça para alterar algo antes de começar).
+Read it over quickly and reply **"Yes, go ahead"** (or ask to change anything before it starts).
 
-✅ **Concluído quando:** Você confirmou e a IA começou a criar os arquivos.
-
----
-
-## Passo 4 — A IA Cria os Arquivos da sua Wiki
-
-Agora a IA vai criar vários arquivos automaticamente. Você não precisa fazer nada — apenas aguarde.
-
-Aqui está o que é criado e o que cada arquivo faz:
-
-| Arquivo | O que faz |
-|---------|-----------|
-| `AGENTS.md` | O manual de instruções da IA — ela lê isso a cada sessão |
-| `wiki/overview.md` | Sua hipótese e perguntas de pesquisa |
-| `wiki/schema.md` | O formato (modelo) para cada tipo de página da wiki |
-| `wiki/index.md` | Uma lista mestre de todas as páginas da wiki (começa vazia) |
-| `wiki/log.md` | Um histórico de tudo que a IA fez |
-
-✅ **Concluído quando:** A IA diz que todos os arquivos foram criados e mostra a saída de verificação.
+✅ **Done when:** You've confirmed and the AI starts creating files.
 
 ---
 
-## Passo 5 — Coloque seu Primeiro PDF em `raw/papers/`
+## Step 4 — The AI Creates Your Wiki Files
 
-Agora é a sua vez. Encontre um artigo de pesquisa que você quer adicionar à wiki (qualquer PDF serve).
+Now the AI will create several files automatically. You don't need to do anything — just wait.
 
-Copie ou mova esse PDF para a pasta `raw/papers/` dentro do seu projeto.
+Here's what gets created and what each file does:
 
-**Exemplo:** Se seu projeto está em `Documentos/minha-wiki-de-pesquisa/`, coloque o PDF em:
+| File | What it does |
+|------|--------------|
+| `AGENTS.md` | The AI's instruction manual — it reads this every session |
+| `wiki/overview.md` | Your thesis statement and research questions |
+| `wiki/schema.md` | The format (template) for each type of wiki page |
+| `wiki/index.md` | A master list of all wiki pages (starts empty) |
+| `wiki/log.md` | A history of everything the AI has done |
+
+✅ **Done when:** The AI says all files have been created and shows you the verification output.
+
+---
+
+## Step 5 — Drop Your First PDF Into `raw/papers/`
+
+Now it's your turn. Find a research paper you want to add to the wiki (any PDF will do).
+
+Copy or move that PDF into the `raw/papers/` folder inside your project.
+
+**Example:** If your project is at `Documents/my-research-wiki/`, put the PDF at:
 ```
-Documentos/minha-wiki-de-pesquisa/raw/papers/meu-primeiro-artigo.pdf
+Documents/my-research-wiki/raw/papers/my-first-paper.pdf
 ```
 
-✅ **Concluído quando:** Seu PDF está dentro de `raw/papers/`.
+✅ **Done when:** Your PDF is sitting inside `raw/papers/`.
 
 ---
 
-## Passo 6 — Ingira seu Primeiro Artigo
+## Step 6 — Ingest Your First Paper
 
-Agora diga à IA para ler e processar o artigo:
+Now tell the AI to read and process the paper:
 
-> "Ingira raw/papers/meu-primeiro-artigo.pdf"
+> "Ingest raw/papers/my-first-paper.pdf"
 
-A IA vai:
-1. Extrair o texto do PDF
-2. Ler o artigo completo
-3. Te dar um breve resumo do que encontrou
-4. Perguntar o que você quer que ela enfatize
-5. Criar páginas da wiki para o artigo, seus conceitos-chave, modelos e autores
-6. Atualizar o índice e o log
+The AI will:
+1. Extract the text from the PDF
+2. Read the full paper
+3. Give you a short briefing about what it found
+4. Ask what you want it to emphasize
+5. Create wiki pages for the paper, its key concepts, models, and authors
+6. Update the index and log
 
-**Durante a discussão (passo 4), você pode dizer coisas como:**
-- "Este artigo é importante porque contradiz o que eu pensava sobre X"
-- "Foque na matemática, não nos experimentos"
-- "Este é o baseline que estou tentando superar — anote suas limitações"
-- "Pode continuar" (se você não tiver preferências específicas)
+**During the discussion step, you can say things like:**
+- "This paper is important because it contradicts what I thought about X"
+- "Focus on the math, not the experiments"
+- "This is the baseline I'm trying to beat — note its limitations"
+- "Just go ahead" (if you have no strong preferences)
 
-✅ **Concluído quando:** A IA diz que a ingestão está completa e você consegue ver novos arquivos em `wiki/papers/`, `wiki/concepts/`, etc.
-
----
-
-## Passo 7 — Explore o Que Foi Criado
-
-Abra a pasta `wiki/` e dê uma olhada. Você deve ver:
-
-- Um novo arquivo em `wiki/papers/` com o título do artigo
-- Possivelmente novos arquivos em `wiki/concepts/` e `wiki/models/`
-- Uma entrada em `wiki/index.md` listando o artigo
-- Uma nova entrada no final de `wiki/log.md`
-
-Você pode abrir qualquer um desses arquivos em um editor de texto para lê-los. Se você usa o [Obsidian](https://obsidian.md) (gratuito), pode abrir a pasta `wiki/` como um vault para ver os `[[links]]` entre páginas como um grafo.
-
-✅ **Concluído quando:** Você olhou para pelo menos uma página da wiki e viu o conteúdo estruturado que a IA criou.
+✅ **Done when:** The AI says the ingest is complete and you can see new files in `wiki/papers/`, `wiki/concepts/`, etc.
 
 ---
 
-## Pronto! 🎉
+## Step 7 — Explore What Was Created
 
-Sua wiki está funcionando. Veja o que fazer a seguir:
+Open the `wiki/` folder and look around. You should see:
 
-### Continue expandindo
-Após cada artigo que você ler, coloque o PDF em `raw/papers/` e diga "Ingira [nome do arquivo]". A wiki fica mais rica a cada artigo.
+- A new file in `wiki/papers/` with the paper's title
+- Possibly new files in `wiki/concepts/` and `wiki/models/`
+- An entry in `wiki/index.md` listing the paper
+- A new entry at the bottom of `wiki/log.md`
 
-### Faça perguntas para ela
-A qualquer momento, pergunte ao seu assistente de IA uma questão de pesquisa como:
-- "O que a wiki diz sobre mecanismos de atenção?"
-- "Compare os dois modelos que já ingerimos"
-- "Quais são as lacunas na minha cobertura do tópico X?"
+You can open any of these files in a text editor to read them. If you use [Obsidian](https://obsidian.md) (free), you can open the `wiki/` folder as a vault to see the `[[links]]` between pages as a graph.
 
-### Faça uma verificação de saúde
-Após cada 10–15 artigos, diga: **"Faça um lint da wiki"** — a IA vai verificar links quebrados, páginas faltando e lacunas, e sugerir o que ler a seguir.
-
-### Escreva uma revisão de literatura
-Quando estiver pronto para escrever, diga: **"Escreva uma revisão sobre [tópico]"** — a IA sintetiza tudo que a wiki sabe em uma narrativa estruturada.
+✅ **Done when:** You've looked at at least one wiki page and seen the structured content the AI created.
 
 ---
 
-## Cartão de Referência Rápida
+## You're Done! 🎉
 
-| O que você quer fazer | O que dizer |
+Your wiki is running. Here's what to do next:
+
+### Keep growing it
+After each paper you read, drop the PDF in `raw/papers/` and say "Ingest [filename]". The wiki gets richer with every paper.
+
+### Ask it questions
+At any point, ask your AI assistant a research question like:
+- "What does the wiki say about attention mechanisms?"
+- "Compare the two models we've ingested so far"
+- "What are the gaps in my coverage of topic X?"
+
+### Run a health check
+After every 10–15 papers, say: **"Lint the wiki"** — the AI will check for broken links, missing pages, and gaps, and suggest what to read next.
+
+### Write a literature review
+When you're ready to write, say: **"Write a review of [topic]"** — the AI synthesizes everything the wiki knows into a structured narrative.
+
+---
+
+## Quick Reference Card
+
+| What you want to do | What to say |
 |---|---|
-| Adicionar um artigo | `"Ingira raw/papers/nome-do-arquivo.pdf"` |
-| Fazer uma pergunta de pesquisa | Pergunte naturalmente |
-| Verificar a saúde da wiki | `"Faça um lint da wiki"` |
-| Escrever uma revisão de literatura | `"Escreva uma revisão sobre [tópico]"` |
-| Ver tudo na wiki | Abra `wiki/index.md` |
-| Ver o que a IA fez | Abra `wiki/log.md` |
+| Add a paper | `"Ingest raw/papers/filename.pdf"` |
+| Ask a research question | Just ask it naturally |
+| Check wiki health | `"Lint the wiki"` |
+| Write a literature review | `"Write a review of [topic]"` |
+| See everything in the wiki | Open `wiki/index.md` |
+| See what the AI has done | Open `wiki/log.md` |
 
 ---
 
-## Solução de Problemas
+## Troubleshooting
 
-**"A IA não criou as pastas"**
-Verifique se seu assistente de IA tem permissão para criar arquivos e pastas no seu computador.
+**"The AI didn't create the folders"**
+Make sure your AI assistant has permission to create files and folders on your computer.
 
-**"Não consigo encontrar os arquivos que a IA criou"**
-Verifique se você disse à IA o caminho correto para a pasta do seu projeto. Tente perguntar: "Onde você criou os arquivos da wiki?"
+**"I can't find the files the AI created"**
+Check that you told the AI the correct path to your project folder. Try asking: "Where did you create the wiki files?"
 
-**"Uma página da wiki parece errada ou incompleta"**
-Você pode pedir à IA para corrigir: "Por favor, atualize a página do artigo [nome] para incluir [informação faltando]."
+**"A wiki page looks wrong or incomplete"**
+You can ask the AI to fix it: "Please update the page for [paper name] to include [missing information]."
 
-**"Quero adicionar pastas para minha área (ex: `datasets/`)"**
-Diga: "Adicione uma pasta `datasets/` à estrutura da wiki e atualize o AGENTS.md para incluí-la."
-
----
-
-## Dicas para o Sucesso a Longo Prazo
-
-- **Ingira um artigo de cada vez.** Processar muitos de uma vez produz páginas rasas e de baixa qualidade.
-- **Converse com a IA durante a ingestão.** Diga o que o artigo significa para sua pesquisa. É aqui que seu próprio pensamento é incorporado.
-- **Faça um lint a cada 2–3 semanas.** Ele detecta problemas antes que se acumulem.
-- **Atualize o `wiki/overview.md` conforme seu pensamento evolui.** A IA usa isso como sua bússola.
-- **Não se preocupe com PDFs perfeitos.** Scans bagunçados, preprints e formatações imperfeitas funcionam bem.
+**"I want to add folders for my field (e.g., `datasets/`)"**
+Say: "Add a `datasets/` folder to the wiki structure and update AGENTS.md to include it."
 
 ---
 
-*Este protocolo funciona para qualquer área de pesquisa. Uma vez que você tenha adaptado o schema ao seu domínio e construído mais de 20 artigos, você terá um artefato intelectual genuinamente poderoso — um grafo composto do seu campo que fica mais inteligente a cada sessão.*
+## Tips for Long-Term Success
+
+- **Ingest one paper at a time.** Rushing through many at once produces shallow, low-quality pages.
+- **Talk to the AI during ingestion.** Tell it what the paper means for your research. This is where your own thinking gets woven in.
+- **Run a lint pass every 2–3 weeks.** It catches problems before they pile up.
+- **Update `wiki/overview.md` as your thinking evolves.** The AI uses it as your compass.
+- **Don't obsess over perfect PDFs.** Messy scans, preprints, and imperfect formatting all work fine.
+
+---
+
+*This protocol works for any research field. Once you've adapted the schema to your domain and built up 20+ papers, you'll have a genuinely powerful intellectual artifact — a compounding graph of your field that grows smarter with every session.*
