@@ -56,7 +56,7 @@ Antes de pedir qualquer coisa à IA, você precisa dar a ela as instruções de 
 **Veja como fazer:**
 
 1. Abra o arquivo `prompt.md` (ele está na mesma pasta que este tutorial)
-2. Selecione todo o texto e copie (`Cmd+A`, depois `Cmd+C` no Mac)
+2. Selecione todo o texto e copie (`Ctrl+A`, depois `Ctrl+C`)
 3. Abra seu assistente de IA e **cole o texto copiado como sua primeira mensagem**
 4. Envie
 
