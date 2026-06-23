@@ -49,26 +49,25 @@ That's it. You do not need to know how to code.
 
 ---
 
-## Step 1 — Load the Setup Instructions into Your AI Assistant
+## Step 1 — Trigger the Setup Skill
 
-Before asking the AI to do anything, you need to give it the setup instructions. The AI has no idea what an LLM Wiki is by default — `prompt.md` is the script it needs to follow.
+The wiki setup is handled by the `llm-wiki-setup` skill, which lives at `.agents/skills/llm-wiki-setup/SKILL.md`. Your AI assistant reads this skill and knows exactly what to do.
 
 **Here's how:**
 
-1. Open the file `prompt.md` (it's in the same folder as this tutorial)
-2. Select all the text and copy it (`Ctrl+A`, then `Ctrl+C`)
-3. Open your AI assistant and **paste the copied text as your first message**
-4. Send it
+1. Open your AI assistant in the root of your wiki project (the folder that contains `.agents/`)
+2. Make sure your AI has access to the project files (e.g., load it as a project or workspace)
+3. Say: **"I want to set up my wiki"** (or "initialize my wiki", "set up my research wiki" — any natural phrasing works)
 
-The AI will now know exactly what to do. It will start the interview (Step 2) automatically.
+The AI will read the skill, **automatically install any missing tools** (Python, pdftotext, pymupdf) for your OS, then start the interview.
 
-✅ **Done when:** You've pasted `prompt.md` into the AI and it has acknowledged it's ready to set up your wiki.
+✅ **Done when:** The AI reports the environment is ready and begins asking you questions.
 
 ---
 
 ## Step 2 — Answer the AI's Questions
 
-After receiving the instructions, the AI will ask you 5 questions. These help it configure the wiki for your specific research. Take your time answering them — even rough answers are fine.
+After confirming the environment is ready, the AI will ask you 5 questions. These help it configure the wiki for your specific research. Take your time answering them — even rough answers are fine.
 
 **The 5 questions:**
 
@@ -222,6 +221,9 @@ When you're ready to write, say: **"Write a review of [topic]"** — the AI synt
 ---
 
 ## Troubleshooting
+
+**"The AI didn't install the tools / says Python is missing"**
+Make sure your AI assistant has permission to run terminal commands. If it can't install automatically, follow its instructions to install Python from https://python.org/downloads, then restart and try again.
 
 **"The AI didn't create the folders"**
 Make sure your AI assistant has permission to create files and folders on your computer.

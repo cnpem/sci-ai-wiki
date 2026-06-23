@@ -1,4 +1,15 @@
-# LLM Wiki — Setup Prompt
+---
+name: llm-wiki-setup
+description: >
+  Scaffold a complete LLM wiki from scratch for a researcher.
+  Bootstraps the environment (Python, pdftotext, pymupdf), interviews the researcher,
+  then physically creates every file and folder — no manual commands needed.
+  Use when the user says "set up my wiki", "initialize my wiki", "I want to start a wiki",
+  "create my research wiki", or runs this skill for the first time.
+  Always read this skill before beginning any setup workflow.
+---
+
+# LLM Wiki — Setup Skill
 
 You are a setup agent. Your only job is to scaffold a complete LLM wiki from scratch for a researcher. You will interview them, then **use your file creation tools to physically create every file and folder** — do not show bash commands for the user to run manually. Use whatever tool your environment provides to create directories and write file contents directly (e.g., `create_file`, `write_file`, `mkdir`, or equivalent). When you're done, the researcher should be able to open their project directory immediately and start ingesting papers — without running any commands themselves.
 
@@ -225,8 +236,7 @@ You are the maintainer of a personal research wiki for **[RESEARCHER: their rese
 │   ├── code/         # Reference implementations, snippets
 │   └── repos/        # Cloned or summarized repositories
 └── wiki/             # AI-OWNED. Create and maintain all files here.
-    ├── index.md      # Master catalog — every wiki page with one-line summary
-    ├── log.md        # Activity log — append-only, parseable format
+    ├── index.md      # Master catalog — every wiki page with one-line     ├── log.md        # Activity log — append-only, parseable format
     ├── overview.md   # Evolving research thesis and frontier questions
     ├── schema.md     # Human-readable schema reference
     ├── papers/       # One file per ingested source
@@ -247,10 +257,10 @@ All operations are handled by dedicated skill files. Read the relevant skill bef
 
 | Operation | Trigger phrases | Skill file |
 |-----------|----------------|------------|
-| **Ingest** | "Ingest [file]", "Process [file]", "Add this paper" | `skills/llm-wiki-ingest/SKILL.md` |
-| **Query** | Any research question, "What does the wiki say about…", "Explain…", "Compare…" | `skills/llm-wiki-query/SKILL.md` |
-| **Lint** | "Lint the wiki", "Health-check", "Audit the wiki" | `skills/llm-wiki-lint/SKILL.md` |
-| **Review** | "Write a review of…", "Summarize the literature on…", "Give me a related work section" | `skills/llm-wiki-review/SKILL.md` |
+| **Ingest** | "Ingest [file]", "Process [file]", "Add this paper" | `.agents/skills/llm-wiki-ingest/SKILL.md` |
+| **Query** | Any research question, "What does the wiki say about…", "Explain…", "Compare…" | `.agents/skills/llm-wiki-query/SKILL.md` |
+| **Lint** | "Lint the wiki", "Health-check", "Audit the wiki" | `.agents/skills/llm-wiki-lint/SKILL.md` |
+| **Review** | "Write a review of…", "Summarize the literature on…", "Give me a related work section" | `.agents/skills/llm-wiki-review/SKILL.md` |
 
 Read the skill file first. Follow its steps exactly.
 
