@@ -4,6 +4,114 @@ You are a setup agent. Your only job is to scaffold a complete LLM wiki from scr
 
 ---
 
+## Phase 0 — Environment Bootstrap
+
+**Run this phase first, before asking the researcher anything.** The wiki's ingest skill requires two tools to extract text from PDFs: `pdftotext` (from poppler) and `pymupdf` (Python library). Neither may be installed on the researcher's machine. Bootstrap them silently now so ingestion never fails later.
+
+Execute the following steps using your shell/terminal tool. Do not ask the user — just run the commands and report the outcome at the end.
+
+### Step 0.0 — Detect Operating System
+
+Run the appropriate command for your shell to determine the OS:
+
+```bash
+# Unix shells (macOS / Linux)
+uname -s
+```
+```powershell
+# Windows PowerShell
+$env:OS   # returns "Windows_NT" on Windows
+```
+
+Use the result to choose the correct install path in every step below.
+
+---
+
+### Step 0.1 — Detect and Install Python 3
+
+**macOS / Linux:**
+```bash
+python3 --version 2>/dev/null || python --version 2>/dev/null
+```
+- Found Python 3.x → proceed.
+- Not found:
+  - **macOS**: `brew install python3` (install Homebrew first if missing: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`)
+  - **Linux (Debian/Ubuntu)**: `sudo apt-get install -y python3 python3-pip`
+  - **Linux (RHEL/Fedora)**: `sudo dnf install -y python3`
+
+**Windows (PowerShell):**
+```powershell
+python --version 2>$null
+```
+- Found Python 3.x → proceed.
+- Not found, try in order:
+  1. `winget install --id Python.Python.3.12 -e --silent` *(Windows 10 1709+ has winget built-in)*
+  2. If winget fails: `choco install python -y` *(requires Chocolatey)*
+  3. If neither is available: tell the user to download Python from https://python.org/downloads and rerun setup.
+- After install, **restart the shell** and verify: `python --version`
+
+> **Note for Windows:** Python's executable is `python`, not `python3`. All subsequent `python3` commands should be replaced with `python` on Windows.
+
+---
+
+### Step 0.2 — Detect and Install `pdftotext` (poppler)
+
+**macOS / Linux:**
+```bash
+which pdftotext
+```
+- Found → proceed.
+- Not found:
+  - **macOS**: `brew install poppler`
+  - **Linux (Debian/Ubuntu)**: `sudo apt-get install -y poppler-utils`
+  - **Linux (RHEL/Fedora)**: `sudo dnf install -y poppler-utils`
+- Verify: `pdftotext -v`
+
+**Windows (PowerShell):**
+```powershell
+where.exe pdftotext 2>$null
+```
+- Found → proceed.
+- Not found, try in order:
+  1. `winget install --id oschwartz10612.poppler -e --silent`
+  2. If winget fails: `choco install poppler -y`
+  3. If choco fails: `scoop install poppler` *(requires Scoop)*
+  4. If all fail: tell the user to download poppler for Windows from https://github.com/oschwartz10612/poppler-windows/releases, extract it, and add the `bin/` folder to their system PATH. Then rerun.
+- Verify: `pdftotext -v`
+
+---
+
+### Step 0.3 — Install `pymupdf` (Python PDF fallback library)
+
+Install even if `pdftotext` was found — it acts as a fallback for scanned or complex PDFs.
+
+**macOS / Linux:**
+```bash
+python3 -m pip install --quiet pymupdf
+```
+- If pip is missing: `python3 -m ensurepip --upgrade` then retry.
+- If PEP 668 blocks it: `python3 -m pip install --quiet --break-system-packages pymupdf`
+- Verify: `python3 -c "import fitz; print('pymupdf OK')"`
+
+**Windows (PowerShell):**
+```powershell
+python -m pip install --quiet pymupdf
+```
+- If pip is missing: `python -m ensurepip --upgrade` then retry.
+- Verify: `python -c "import fitz; print('pymupdf OK')"`
+
+---
+
+### Step 0.4 — Report Bootstrap Results
+
+After running the above, tell the researcher in a single line:
+
+> **Environment ready:** Python [version] ✓ · pdftotext [version] ✓ · pymupdf [version] ✓  *(OS: [Windows/macOS/Linux])*
+
+If any tool could not be installed, explain clearly which one failed and why, then ask the researcher how to proceed. Do not continue with Phase 1 until the environment is confirmed.
+
+---
+
 ## Phase 1 — Interview
 
 Before creating anything, ask the researcher these questions. Wait for their full answers before proceeding.
@@ -482,16 +590,9 @@ Tell the researcher:
 >     └── papers/ concepts/ models/ authors/ reviews/
 > ```
 >
-> **Before your first session**, install the four skill files into `skills/`:
-> ```
-> skills/
-> ├── llm-wiki-ingest/SKILL.md
-> ├── llm-wiki-query/SKILL.md
-> ├── llm-wiki-lint/SKILL.md
-> └── llm-wiki-review/SKILL.md
-> ```
+> **PDF extraction tools are already installed** (bootstrapped in Phase 0): `pdftotext` and `pymupdf` are ready to use — no manual setup needed.
 >
-> **Then to get started:**
+> **To get started:**
 > 1. Drop a PDF into `raw/papers/`
 > 2. Start a new AI session with `AGENTS.md` loaded as your project instructions
 > 3. Say: **"Ingest raw/papers/[your-first-paper.pdf]"**
