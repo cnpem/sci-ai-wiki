@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wiki Graph — Research Knowledge Map</title>
+  <style>
+    :root {
+      --bg:          #070d12;
+      --surface:     #0c151d;
+      --surface2:    #101c28;
+      --border:      #203445;
+      --text:        #e6edf3;
+      --text-muted:  #738295;
+      --text-dim:    #a6b4c2;
+      --accent:      #7bd9c8;
+      --accent2:     #d6a75e;
+      --terminal:    #5ee787;
+      --link:        #617486;
+      --link-hot:    #f3fafc;
+      --label:       #ffffff;
+      --label-dim:   #d8e0e8;
+      --radius:      0px;
+      --shadow:      none;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'JetBrains Mono', 'SFMono-Regular', 'Cascadia Code', 'Fira Code', Menlo, Consolas, monospace;
+      font-size: 14px;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    body::after {
+      content: '';
+      position: fixed; inset: 0; pointer-events: none; z-index: 500;
+      background:
+        repeating-linear-gradient(0deg, rgba(255,255,255,0.025) 0 1px, transparent 1px 4px);
+      mix-blend-mode: screen;
+      opacity: 0.18;
+    }
+    #topbar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-height: 54px;
+      padding: 8px 18px;
+      background: rgba(12,21,29,0.98);
+      border-bottom: 1px solid var(--border);
+      z-index: 100;
+      flex-shrink: 0;
+    }
+    #topbar h1 {
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: -0.01em;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .logo {
+      width: 22px; height: 22px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 11px; font-weight: 800; color: var(--accent);
+      box-shadow: inset 0 0 0 1px rgba(123,217,200,0.08);
+    }
+    #search-wrap { flex: 1; max-width: 430px; position: relative; }
+    #search-wrap::before {
+      content: '$';
+      position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+      color: var(--terminal); font-size: 14px; font-weight: 800; z-index: 1;
+    }
+    #search {
+      width: 100%;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 0;
+      color: var(--text);
+      padding: 8px 12px 8px 34px;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    #search:focus { border-color: var(--accent); background: #0c1924; }
+    #search::placeholder { color: var(--text-muted); }
+    #search-icon {
+      display: none;
+      position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
+      color: var(--text-muted); pointer-events: none; font-size: 14px;
+    }
+    .filter-pills { display: flex; gap: 6px; flex-wrap: wrap; }
+    .filter-pills:empty { display: none; }
+    .pill {
+      padding: 5px 10px; border-radius: 0; font-size: 12px; font-weight: 800;
+      letter-spacing: 0.03em; cursor: pointer; border: 1.5px solid var(--type-color);
+      transition: all 0.18s; opacity: 0.45; user-select: none;
+      color: var(--type-color); background: color-mix(in srgb, var(--type-color) 5%, transparent);
+    }
+    .pill.active { opacity: 1; background: color-mix(in srgb, var(--type-color) 14%, transparent); }
+    .pill:hover { opacity: 1; background: var(--type-color); color: #061016; }
+    #open-btn {
+      margin-left: auto; padding: 7px 16px;
+      background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 0; color: var(--text); font-size: 14px;
+      font-weight: 800; cursor: pointer; transition: all 0.15s;
+      white-space: nowrap; display: flex; align-items: center; gap: 6px;
+    }
+    #open-btn::before { content: '['; color: var(--terminal); }
+    #open-btn::after { content: ']'; color: var(--terminal); }
+    #open-btn:hover { border-color: var(--accent); background: var(--accent); color: #061016; }
+    #open-btn2:hover {
+      background: var(--accent) !important;
+      color: #061016 !important;
+    }
+    #main { display: flex; flex: 1; overflow: hidden; }
+    #canvas-wrap { flex: 1; position: relative; overflow: hidden; }
+    svg#graph { width: 100%; height: 100%; display: block; }
+    #sidebar {
+      width: 300px; background: var(--surface);
+      border-left: 1px solid var(--border);
+      display: flex; flex-direction: column;
+      overflow: hidden; flex-shrink: 0;
+      transition: width 0.25s;
+    }
+    #sidebar.collapsed { width: 0; border-left: none; }
+    #sidebar-header {
+      padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+    }
+    #node-title { font-size: 15px; font-weight: 700; line-height: 1.3; word-break: break-word; }
+    #node-type-badge {
+      padding: 3px 8px; border-radius: 0; font-size: 11px; font-weight: 800;
+      letter-spacing: 0.06em; text-transform: uppercase; flex-shrink: 0; margin-top: 2px;
+    }
+    #sidebar-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+    #sidebar-body::-webkit-scrollbar { width: 4px; }
+    #sidebar-body::-webkit-scrollbar-track { background: transparent; }
+    #sidebar-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    .meta-row { display: flex; gap: 8px; font-size: 13px; margin-bottom: 6px; }
+    .meta-key { color: var(--text-muted); width: 80px; flex-shrink: 0; }
+    .meta-val { color: var(--text-dim); word-break: break-word; }
+    .section-label {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--text-muted); margin: 14px 0 8px;
+    }
+    .link-chip {
+      display: inline-block; padding: 4px 9px; border-radius: 0; font-size: 12px;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text-dim); margin: 2px 3px 2px 0; cursor: pointer;
+      transition: all 0.15s; border-left-width: 3px;
+    }
+    .link-chip:hover { border-color: var(--accent); color: var(--text); background: #1c2a3a; }
+    #landing {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 20px;
+      background: var(--bg); z-index: 50;
+    }
+    #landing.hidden { display: none; }
+    .landing-icon {
+      width: 72px; height: 72px;
+      background: var(--surface2);
+      border: 1px solid var(--border); border-radius: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; box-shadow: var(--shadow);
+    }
+    #landing h2 {
+      font-size: 24px; font-weight: 800; letter-spacing: 0;
+      color: var(--text);
+    }
+    #landing h2::before { content: '> '; color: var(--terminal); }
+    #landing h2::after {
+      content: ' _';
+      color: var(--terminal);
+      animation: blink 1s steps(1,end) infinite;
+    }
+    #landing p {
+      font-size: 14px; color: var(--text-muted); max-width: 380px;
+      text-align: center; line-height: 1.6;
+    }
+    .drop-zone {
+      width: 360px; height: 120px; border: 2px dashed var(--border);
+      border-radius: var(--radius); display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 8px;
+      color: var(--text-muted); font-size: 14px; cursor: pointer; transition: all 0.2s;
+    }
+    .drop-zone:hover, .drop-zone.drag-over {
+      border-color: var(--accent); background: rgba(124,199,216,0.08); color: var(--text);
+    }
+    .drop-zone .dz-icon { font-size: 28px; }
+    .or-divider {
+      color: var(--text-muted); font-size: 12px;
+      display: flex; align-items: center; gap: 10px; width: 360px;
+    }
+    .or-divider::before, .or-divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    #legend {
+      position: absolute; bottom: 16px; left: 16px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 10px 14px;
+      font-size: 12px; display: flex; flex-direction: column;
+      gap: 5px; z-index: 10; pointer-events: none;
+    }
+    #legend.hidden { display: none; }
+    .legend-row { display: flex; align-items: center; gap: 7px; color: var(--text-dim); }
+    .legend-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
+    #stats {
+      position: absolute; top: 12px; left: 12px;
+      display: flex; gap: 8px; z-index: 10; pointer-events: none;
+    }
+    #stats.hidden { display: none; }
+    .stat-chip {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 0; padding: 5px 10px; font-size: 12px; color: var(--text-muted);
+    }
+    .stat-chip strong { color: var(--text); font-weight: 700; }
+    #tooltip {
+      position: fixed; background: var(--surface); border: 1px solid var(--border);
+      border-radius: 0; padding: 9px 12px; font-size: 13px; color: var(--text);
+      pointer-events: none; z-index: 200; max-width: 220px;
+      box-shadow: var(--shadow); opacity: 0; transition: opacity 0.15s;
+    }
+    #tooltip.visible { opacity: 1; }
+    #tooltip .tt-type { font-size: 11px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 3px; }
+    #tooltip .tt-name { font-weight: 600; word-break: break-word; }
+    #tooltip .tt-connections { color: var(--text-muted); font-size: 12px; margin-top: 3px; }
+    #zoom-controls {
+      position: absolute; bottom: 16px; right: 16px;
+      display: flex; flex-direction: column; gap: 4px; z-index: 10;
+    }
+    #zoom-controls.hidden { display: none; }
+    .zoom-btn {
+      width: 32px; height: 32px; background: var(--surface);
+      border: 1px solid var(--border); border-radius: 0;
+      color: var(--text-muted); font-size: 17px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; transition: all 0.15s;
+    }
+    .zoom-btn:hover { background: var(--accent); color: #061016; border-color: var(--accent); }
+    #loading {
+      position: absolute; inset: 0; background: var(--bg);
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; gap: 16px; z-index: 60;
+    }
+    #loading.hidden { display: none; }
+    .spinner {
+      width: 36px; height: 36px; border: 3px solid var(--border);
+      border-top-color: var(--accent); border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes blink { 50% { opacity: 0; } }
+    #loading p { font-size: 14px; color: var(--text-muted); }
+    @media (max-width: 640px) { #sidebar { display: none; } .filter-pills { display: none; } }
+  </style>
+</head>
+<body>
+
+<div id="topbar">
+  <h1><div class="logo">KG</div> Research Graph</h1>
+  <div id="search-wrap">
+    <span id="search-icon">&#x2315;</span>
+    <input id="search" type="text" placeholder="Search nodes&#x2026;" autocomplete="off" />
+  </div>
+  <div class="filter-pills" id="type-filters"></div>
+  <button id="open-btn">Open Wiki</button>
+</div>
+
+<div id="main">
+  <div id="canvas-wrap">
+    <div id="landing">
+      <div class="landing-icon">KG</div>
+      <h2>Research Knowledge Map</h2>
+      <p>Open any Markdown wiki directory to visualise connections across whatever folder groups it contains.</p>
+      <div class="drop-zone" id="drop-zone">
+        <div class="dz-icon">&#x1F4C1;</div>
+        <div>Drop your <strong>wiki/</strong> folder here</div>
+        <div style="font-size:12px;color:var(--text-muted)">or click to browse</div>
+      </div>
+      <div class="or-divider">or</div>
+      <button id="open-btn2" style="padding:10px 24px;background:var(--surface2);border:1px solid var(--accent);border-radius:0;color:var(--text);font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;">
+        [ Choose Wiki Directory ]
+      </button>
+      <p style="font-size:12px;color:var(--text-muted);max-width:340px;text-align:center;">
+        Your files never leave your computer. Everything runs locally in this browser tab.
+      </p>
+    </div>
+    <div id="loading" class="hidden">
+      <div class="spinner"></div>
+      <p id="loading-msg">Reading wiki files&#x2026;</p>
+    </div>
+    <svg id="graph"></svg>
+    <div id="legend" class="hidden"></div>
+    <div id="stats" class="hidden">
+      <div class="stat-chip"><strong id="stat-nodes">0</strong> nodes</div>
+      <div class="stat-chip"><strong id="stat-edges">0</strong> edges</div>
+    </div>
+    <div id="zoom-controls" class="hidden">
+      <button class="zoom-btn" id="zoom-in">+</button>
+      <button class="zoom-btn" id="zoom-reset">&#x2299;</button>
+      <button class="zoom-btn" id="zoom-out">&#x2212;</button>
+    </div>
+  </div>
+  <div id="sidebar" class="collapsed">
+    <div id="sidebar-header">
+      <div style="flex:1;min-width:0;">
+        <div id="node-type-badge"></div>
+        <div id="node-title" style="margin-top:6px;">&#x2014;</div>
+      </div>
+      <button id="sidebar-close" style="background:none;border:none;color:var(--text-muted);font-size:19px;cursor:pointer;line-height:1;padding:2px;">&#x2715;</button>
+    </div>
+    <div id="sidebar-body">
+      <p style="color:var(--text-muted);font-size:13px;">Click a node to inspect it.</p>
+    </div>
+  </div>
+</div>
+
+<div id="tooltip">
+  <div class="tt-type" id="tt-type"></div>
+  <div class="tt-name" id="tt-name"></div>
+  <div class="tt-connections" id="tt-conn"></div>
+</div>
+
+<script>
+const TYPE_PALETTE = [
+  '#7bd9c8', '#d6a75e', '#8fb7ff', '#c59cff', '#ff8f70',
+  '#91d36e', '#ff7eb6', '#74c0fc', '#ffd166', '#b8e986',
+  '#f4a261', '#a6e3a1', '#89ddff', '#c6a0f6', '#f38ba8',
+  '#94e2d5', '#e5c07b', '#98c379', '#56b6c2', '#e06c75'
+];
+const BASE_RADIUS = 7.5;
+const SKIP_IDS = new Set(['index','log','schema','overview','readme','agents','protocol','gitkeep']);
+
+const state = {
+  nodes:[], edges:[], nodeMap:{}, adjacency:{},
+  activeFilters: new Set(), typeCounts:{}, typeColors:{},
+  searchTerm:'', selectedNode:null, hoveredNode:null, dragFocusNode:null,
+  zoom:{k:1,tx:0,ty:0}
+};
+
+let svgEl, svgG, sim;
+const svgNS = 'http://www.w3.org/2000/svg';
+let linkEls={}, nodeEls={}, labelEls={};
+
+/* ── FILE SYSTEM ── */
+async function openWikiDir() {
+  if (!('showDirectoryPicker' in window)) {
+    alert('Your browser does not support the File System Access API.\nPlease use Chrome or Edge (desktop) and open this file via a local server or directly.');
+    return;
+  }
+  let h;
+  try { h = await window.showDirectoryPicker({ mode:'read' }); } catch(e){ return; }
+  await loadFromHandle(h);
+}
+
+async function loadFromHandle(root) {
+  showLoading('Scanning directory\u2026');
+  hideLanding();
+  const files = [];
+  const wikiRoot = await resolveWikiRoot(root);
+  await collectMd(wikiRoot, '', files);
+  setLoadingMsg('Parsing ' + files.length + ' files\u2026');
+  await pause(10);
+  const {nodes, edges} = buildGraph(files);
+  state.nodes = nodes; state.edges = edges;
+  state.nodeMap = {}; state.adjacency = {};
+  for (const n of nodes) { state.nodeMap[n.id]=n; state.adjacency[n.id]=new Set(); }
+  for (const e of edges) {
+    state.adjacency[e.source] && state.adjacency[e.source].add(e.target);
+    state.adjacency[e.target] && state.adjacency[e.target].add(e.source);
+  }
+  for (const n of nodes) n.degree = (state.adjacency[n.id]||new Set()).size;
+  rebuildTypeControls();
+  hideLoading();
+  renderGraph();
+  updateStats();
+  document.getElementById('legend').classList.remove('hidden');
+  document.getElementById('stats').classList.remove('hidden');
+  document.getElementById('zoom-controls').classList.remove('hidden');
+}
+
+async function resolveWikiRoot(root) {
+  if (normalizeType(root.name) === 'wiki') return root;
+  try {
+    for await (const [name, handle] of root.entries()) {
+      if (handle.kind === 'directory' && normalizeType(name) === 'wiki') return handle;
+    }
+  } catch(e) {
+    // Some browsers restrict directory iteration after a picker cancellation.
+  }
+  return root;
+}
+
+async function collectMd(dir, prefix, out) {
+  const SKIP_DIRS = new Set(['.git','.agents','raw','node_modules','.DS_Store']);
+  for await (const [name, handle] of dir.entries()) {
+    if (handle.kind === 'directory') {
+      if (!SKIP_DIRS.has(name))
+        await collectMd(handle, prefix ? prefix+'/'+name : name, out);
+    } else if (name.endsWith('.md')) {
+      const f = await handle.getFile();
+      const text = await f.text();
+      out.push({ path: (prefix ? prefix+'/' : '') + name, content: text });
+    }
+  }
+}
+
+/* ── GRAPH BUILDING ── */
+function normalizeType(raw) {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  const cleaned = String(value || '')
+    .replace(/\.md$/i, '')
+    .trim()
+    .replace(/^[./]+|[./]+$/g, '')
+    .replace(/['"]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return cleaned || 'root';
+}
+
+function typeLabel(type) {
+  return String(type || 'root')
+    .split('-')
+    .filter(Boolean)
+    .map(part => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ') || 'Root';
+}
+
+function typeColor(type) {
+  return state.typeColors[type] || generatedTypeColor(0, 1);
+}
+
+function generatedTypeColor(index, total) {
+  if (index < TYPE_PALETTE.length) return TYPE_PALETTE[index];
+  const extra = index - TYPE_PALETTE.length;
+  const span = Math.max(1, total - TYPE_PALETTE.length);
+  const hue = (extra * 360 / span + 28) % 360;
+  return 'hsl(' + hue.toFixed(1) + ' 72% 68%)';
+}
+
+function nodeRadius(node) {
+  return BASE_RADIUS + Math.min((node.degree || 0) * 0.9, 7);
+}
+
+function structuralPathParts(path) {
+  const parts = path.split('/').filter(Boolean);
+  while (parts.length > 1 && normalizeType(parts[0]) === 'wiki') parts.shift();
+  return parts;
+}
+
+function detectType(path, fm = {}) {
+  const explicit = fm.type || fm.kind || fm.category || fm.collection || fm.group;
+  if (explicit) return normalizeType(explicit);
+  const parts = structuralPathParts(path);
+  return parts.length > 1 ? normalizeType(parts[0]) : 'root';
+}
+
+function parseFrontmatter(text) {
+  const m = text.match(/^---\s*\n([\s\S]*?)\n---/);
+  if (!m) return {};
+  const obj={};
+  for (const line of m[1].split('\n')) {
+    const kv = line.match(/^(\w[\w_-]*):\s*(.*)$/);
+    if (kv) {
+      let v = kv[2].trim().replace(/^["']|["']$/g,'');
+      const arr = v.match(/^\[(.+)\]$/);
+      if (arr) v = arr[1].split(',').map(s=>s.trim().replace(/^["']|["']$/g,''));
+      obj[kv[1]] = v;
+    }
+  }
+  return obj;
+}
+
+function extractLinks(text) {
+  const links = new Set();
+  const re = /\[\[([^\]|#\n]+?)(?:[|#][^\]\n]*)?\]\]/g;
+  let m;
+  while ((m = re.exec(text)) !== null)
+    links.add(m[1].trim().toLowerCase().replace(/\s+/g,'_').replace(/\.md$/,''));
+  return links;
+}
+
+function pathToId(path) {
+  return path.replace(/^.*\//,'').replace(/\.md$/,'').toLowerCase().replace(/\s+/g,'_');
+}
+
+function buildGraph(files) {
+  const nodes=[], rawLinks=[];
+  for (const f of files) {
+    const id = pathToId(f.path);
+    if (SKIP_IDS.has(id)) continue;
+    const fm = parseFrontmatter(f.content);
+    const type = detectType(f.path, fm);
+    const title = (fm.title||fm.name||id).replace(/_/g,' ').replace(/^['"]|['"]$/g,'');
+    const links = extractLinks(f.content);
+    nodes.push({ id, type, title, fm, path:f.path, links, x:0,y:0,vx:0,vy:0 });
+    for (const t of links) if (t!==id) rawLinks.push({from:id, to:t});
+  }
+  const nodeIds = new Set(nodes.map(n=>n.id));
+  const edgeSet = new Set(), edges=[];
+  for (const {from, to} of rawLinks) {
+    if (!nodeIds.has(to)) continue;
+    const key = [from,to].sort().join('||');
+    if (edgeSet.has(key)) continue;
+    edgeSet.add(key);
+    edges.push({source:from, target:to});
+  }
+  return {nodes, edges};
+}
+
+function rebuildTypeControls() {
+  state.typeCounts = {};
+  for (const n of state.nodes) state.typeCounts[n.type] = (state.typeCounts[n.type] || 0) + 1;
+  const types = Object.keys(state.typeCounts).sort((a, b) =>
+    state.typeCounts[b] - state.typeCounts[a] || typeLabel(a).localeCompare(typeLabel(b))
+  );
+  state.typeColors = {};
+  types.forEach((type, index) => {
+    state.typeColors[type] = generatedTypeColor(index, types.length);
+  });
+  state.activeFilters = new Set(types);
+
+  const filters = document.getElementById('type-filters');
+  filters.innerHTML = '';
+  for (const type of types) {
+    const pill = mk('div', 'pill active');
+    pill.dataset.type = type;
+    pill.style.setProperty('--type-color', typeColor(type));
+    pill.textContent = typeLabel(type) + ' ' + state.typeCounts[type];
+    pill.addEventListener('click', () => {
+      if (state.activeFilters.has(type)) {
+        state.activeFilters.delete(type);
+        pill.classList.remove('active');
+      } else {
+        state.activeFilters.add(type);
+        pill.classList.add('active');
+      }
+      if (state.selectedNode && !state.activeFilters.has(state.selectedNode.type)) {
+        state.selectedNode = null;
+        document.getElementById('sidebar').classList.add('collapsed');
+      }
+      renderGraph();
+      updateStats();
+    });
+    filters.appendChild(pill);
+  }
+
+  const legend = document.getElementById('legend');
+  legend.innerHTML = '';
+  for (const type of types) {
+    const row = mk('div', 'legend-row');
+    const dot = mk('div', 'legend-dot');
+    dot.style.background = typeColor(type);
+    row.appendChild(dot);
+    row.appendChild(document.createTextNode(typeLabel(type)));
+    legend.appendChild(row);
+  }
+}
+
+/* ── FORCE SIMULATION ── */
+class ForceSimulation {
+  constructor(nodes, edges) {
+    this.nodes=nodes; this.edges=edges;
+    this.alpha=1; this.alphaDecay=0.018; this.velocityDecay=0.55;
+    this.W=800; this.H=600; this.running=false; this.onTick=null;
+    this._init();
+  }
+  _init() {
+    // Place nodes on a jittered grid / spiral so they start well-separated
+    const n=this.nodes.length;
+    const cx=this.W/2, cy=this.H/2;
+    const minSpread=Math.max(180, Math.sqrt(n)*80);
+    for (let i=0;i<n;i++) {
+      // Golden-angle spiral placement
+      const golden=2.399963; // 2π / φ²
+      const r=minSpread * Math.sqrt((i+0.5)/n);
+      const a=i*golden;
+      this.nodes[i].x=cx+Math.cos(a)*r+(Math.random()-0.5)*30;
+      this.nodes[i].y=cy+Math.sin(a)*r+(Math.random()-0.5)*30;
+      this.nodes[i].vx=0; this.nodes[i].vy=0;
+    }
+  }
+  resize(W,H){this.W=W;this.H=H;}
+  tick() {
+    if (this.alpha<0.001){this.running=false;return;}
+    const a=this.alpha, ns=this.nodes, N=ns.length;
+
+    // Many-body repulsion — strong, with distance floor to prevent explosion
+    const repStr=3000;
+    const minDist=15, maxDist=400;
+    for (let i=0;i<N;i++) for (let j=i+1;j<N;j++) {
+      let dx=ns[j].x-ns[i].x, dy=ns[j].y-ns[i].y;
+      const d=Math.sqrt(dx*dx+dy*dy)||minDist;
+      if (d>maxDist) continue; // skip very distant pairs (Barnes-Hut approximation)
+      const clamped=Math.max(d,minDist);
+      const f=repStr*a/(clamped*clamped*clamped);
+      ns[i].vx-=dx*f*d; ns[i].vy-=dy*f*d;
+      ns[j].vx+=dx*f*d; ns[j].vy+=dy*f*d;
+    }
+
+    // Collision (prevent overlap)
+    const collStr=0.6;
+    for (let i=0;i<N;i++) for (let j=i+1;j<N;j++) {
+      let dx=ns[j].x-ns[i].x, dy=ns[j].y-ns[i].y;
+      const d=Math.sqrt(dx*dx+dy*dy)||0.01;
+      const ri=nodeRadius(ns[i])+4;
+      const rj=nodeRadius(ns[j])+4;
+      const minD=ri+rj;
+      if (d<minD) {
+        const overlap=(minD-d)/d*collStr;
+        ns[i].vx-=dx*overlap; ns[i].vy-=dy*overlap;
+        ns[j].vx+=dx*overlap; ns[j].vy+=dy*overlap;
+      }
+    }
+
+    // Spring / link force — gentle, long rest length
+    const springK=0.06, restLen=160;
+    for (const e of this.edges) {
+      const src=state.nodeMap[e.source], tgt=state.nodeMap[e.target];
+      if(!src||!tgt) continue;
+      const dx=tgt.x-src.x, dy=tgt.y-src.y;
+      const d=Math.sqrt(dx*dx+dy*dy)||1;
+      const f=(d-restLen)/d*springK*a;
+      src.vx+=dx*f; src.vy+=dy*f; tgt.vx-=dx*f; tgt.vy-=dy*f;
+    }
+
+    // Weak center gravity — only pull if node is far from center
+    const cx=this.W/2, cy=this.H/2;
+    const gStr=0.012*a;
+    for (const n of ns) {
+      n.vx+=(cx-n.x)*gStr;
+      n.vy+=(cy-n.y)*gStr;
+    }
+
+    // Integrate + velocity cap
+    const maxV=12;
+    for (const n of ns) {
+      if(n._fixed) continue;
+      n.vx*=this.velocityDecay; n.vy*=this.velocityDecay;
+      // Cap velocity to prevent explosions
+      const speed=Math.sqrt(n.vx*n.vx+n.vy*n.vy);
+      if(speed>maxV){n.vx=n.vx/speed*maxV; n.vy=n.vy/speed*maxV;}
+      n.x+=n.vx; n.y+=n.vy;
+    }
+
+    this.alpha*=(1-this.alphaDecay);
+    if(this.onTick) this.onTick();
+  }
+  start() {
+    this.running=true;
+    const loop=()=>{ if(!this.running){if(this.onTick)this.onTick();return;} this.tick(); requestAnimationFrame(loop); };
+    requestAnimationFrame(loop);
+  }
+  reheat(){this.alpha=Math.max(this.alpha,0.4);if(!this.running)this.start();}
+}
+
+/* ── RENDER ── */
+function getVisibleNodes() {
+  return state.nodes.filter(n=>state.activeFilters.has(n.type));
+}
+function getVisibleEdges() {
+  const vis=new Set(getVisibleNodes().map(n=>n.id));
+  return state.edges.filter(e=>vis.has(e.source)&&vis.has(e.target));
+}
+
+function renderGraph() {
+  svgEl = document.getElementById('graph');
+  svgEl.innerHTML='';
+  const rect=svgEl.getBoundingClientRect();
+  const W=rect.width||window.innerWidth-300, H=rect.height||window.innerHeight-50;
+
+  const defs=document.createElementNS(svgNS,'defs');
+  defs.innerHTML='<pattern id="grid" width="48" height="48" patternUnits="userSpaceOnUse"><path d="M 48 0 L 0 0 0 48" fill="none" stroke="#162332" stroke-width="1" opacity="0.72"/></pattern><filter id="glow"><feGaussianBlur stdDeviation="2.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter><filter id="link-glow"><feGaussianBlur stdDeviation="1.2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>';
+  svgEl.appendChild(defs);
+
+  svgG=document.createElementNS(svgNS,'g');
+  svgEl.appendChild(svgG);
+
+  const bg=document.createElementNS(svgNS,'rect');
+  bg.setAttribute('width','100%'); bg.setAttribute('height','100%');
+  bg.setAttribute('fill','url(#grid)'); bg.style.cursor='grab';
+  svgEl.insertBefore(bg,svgG);
+
+  const ll=document.createElementNS(svgNS,'g');
+  const nl=document.createElementNS(svgNS,'g');
+  const lbl=document.createElementNS(svgNS,'g');
+  svgG.appendChild(ll); svgG.appendChild(nl); svgG.appendChild(lbl);
+
+  linkEls={}; nodeEls={}; labelEls={};
+
+  const vEdges=getVisibleEdges();
+  for (const e of vEdges) {
+    const line=document.createElementNS(svgNS,'line');
+    line.setAttribute('stroke','var(--link)');
+    line.setAttribute('stroke-opacity','0.58');
+    line.setAttribute('stroke-width','1.35');
+    line.setAttribute('stroke-linecap','round');
+    ll.appendChild(line);
+    linkEls[e.source+'||'+e.target]=line;
+  }
+
+  const vNodes=getVisibleNodes();
+  for (const n of vNodes) {
+    const color=typeColor(n.type);
+    const scaledR=nodeRadius(n);
+
+    const c=document.createElementNS(svgNS,'circle');
+    c.setAttribute('r',scaledR); c.setAttribute('fill',color);
+    c.setAttribute('stroke','#071018'); c.setAttribute('stroke-width','1.8');
+    c.style.cursor='pointer'; c.dataset.id=n.id;
+    nl.appendChild(c);
+    nodeEls[n.id]={el:c, r:scaledR};
+
+    const t=document.createElementNS(svgNS,'text');
+    t.setAttribute('text-anchor','middle'); t.setAttribute('dominant-baseline','hanging');
+    t.setAttribute('font-family','JetBrains Mono, SFMono-Regular, Cascadia Code, Fira Code, Menlo, Consolas, monospace');
+    t.setAttribute('font-size','15'); t.setAttribute('font-weight','650');
+    t.setAttribute('fill','var(--label)');
+    t.setAttribute('paint-order','stroke'); t.setAttribute('stroke','#080b11');
+    t.setAttribute('stroke-width','4'); t.setAttribute('pointer-events','none');
+    t.textContent=trunc(n.title);
+    lbl.appendChild(t);
+    labelEls[n.id]=t;
+
+    attachNodeEvents(c, n);
+  }
+
+  sim=new ForceSimulation(vNodes, vEdges);
+  sim.resize(W, H); sim.onTick=paintTick; sim.start();
+  setupZoomPan(bg, svgEl);
+}
+
+function trunc(s){ return s.length>24 ? s.slice(0,22)+'\u2026' : s; }
+
+function paintTick() {
+  const vEdges=getVisibleEdges();
+  const q=state.searchTerm.toLowerCase();
+  const sel=state.selectedNode;
+  const focus=state.dragFocusNode || state.hoveredNode || sel;
+  const focusNeighbors=focus && state.adjacency[focus.id] ? state.adjacency[focus.id] : new Set();
+
+  for (const e of vEdges) {
+    const line=linkEls[e.source+'||'+e.target]; if(!line) continue;
+    const src=state.nodeMap[e.source], tgt=state.nodeMap[e.target];
+    if(!src||!tgt) continue;
+    line.setAttribute('x1',src.x); line.setAttribute('y1',src.y);
+    line.setAttribute('x2',tgt.x); line.setAttribute('y2',tgt.y);
+    const hi=focus&&(e.source===focus.id||e.target===focus.id);
+    const dim=focus&&!hi;
+    line.setAttribute('stroke', hi?'var(--link-hot)':'var(--link)');
+    line.setAttribute('stroke-opacity', hi?'0.96':(dim?'0.12':'0.58'));
+    line.setAttribute('stroke-width', hi?'3.2':'1.35');
+    line.setAttribute('filter', hi?'url(#link-glow)':'');
+  }
+
+  for (const n of getVisibleNodes()) {
+    const ne=nodeEls[n.id], le=labelEls[n.id]; if(!ne) continue;
+    const isSel=sel&&sel.id===n.id;
+    const isFocus=focus&&focus.id===n.id;
+    const isNeighbor=focus&&focusNeighbors.has(n.id);
+    const isSearch=q&&(n.title.toLowerCase().includes(q)||n.id.includes(q));
+    const dim=(focus||q)&&!isFocus&&!isNeighbor&&!isSearch;
+    ne.el.setAttribute('cx',n.x); ne.el.setAttribute('cy',n.y);
+    ne.el.setAttribute('opacity', dim?'0.16':'1');
+    ne.el.setAttribute('filter', (isFocus||isNeighbor||isSearch)?'url(#glow)':'');
+    ne.el.setAttribute('stroke', (isFocus||isNeighbor)?'var(--link-hot)':'#071018');
+    ne.el.setAttribute('stroke-width', isFocus?'2.8':(isNeighbor?'2.2':'1.8'));
+    if(le){
+      le.setAttribute('x',n.x); le.setAttribute('y',n.y+ne.r+5);
+      le.setAttribute('opacity', dim?'0.15': (isFocus||isNeighbor||isSearch)?'1':'0.82');
+      le.setAttribute('font-weight', (isFocus||isNeighbor||isSearch)?'800':'650');
+    }
+  }
+}
+
+/* ── NODE EVENTS ── */
+function clientToGraphPoint(clientX, clientY) {
+  const rect=svgEl.getBoundingClientRect();
+  const z=state.zoom;
+  return {
+    x:(clientX-rect.left-z.tx)/z.k,
+    y:(clientY-rect.top-z.ty)/z.k
+  };
+}
+
+function attachNodeEvents(circle, node) {
+  let suppressClick=false;
+  circle.addEventListener('mouseenter',e=>{
+    state.hoveredNode=node;
+    showTooltip(e,node);
+    paintTick();
+  });
+  circle.addEventListener('mousemove',moveTooltip);
+  circle.addEventListener('mouseleave',()=>{
+    if (!state.dragFocusNode) {
+      state.hoveredNode=null;
+      hideTooltip();
+      paintTick();
+    }
+  });
+  circle.addEventListener('click',e=>{
+    e.stopPropagation();
+    if (suppressClick) return;
+    selectNode(node);
+  });
+  let drag=false, sx, sy;
+  circle.addEventListener('mousedown',e=>{
+    e.preventDefault(); drag=false; sx=e.clientX; sy=e.clientY;
+    state.dragFocusNode=node;
+    node._fixed=true;
+    node.vx=0; node.vy=0;
+    const mv=ev=>{
+      if(Math.abs(ev.clientX-sx)+Math.abs(ev.clientY-sy)>3) drag=true;
+      const pt=clientToGraphPoint(ev.clientX, ev.clientY);
+      node.x=pt.x; node.y=pt.y; node.vx=0; node.vy=0;
+      moveTooltip(ev);
+      if (sim) sim.reheat();
+      paintTick();
+    };
+    const up=ev=>{
+      window.removeEventListener('mousemove',mv); window.removeEventListener('mouseup',up);
+      suppressClick=drag;
+      if (suppressClick) setTimeout(()=>{suppressClick=false;},0);
+      state.dragFocusNode=null;
+      const overNode=document.elementFromPoint(ev.clientX, ev.clientY)===circle;
+      if (!overNode) {
+        state.hoveredNode=null;
+        hideTooltip();
+      }
+      node._fixed=false;
+      if (sim) sim.reheat();
+      paintTick();
+    };
+    window.addEventListener('mousemove',mv); window.addEventListener('mouseup',up);
+  });
+}
+
+/* ── TOOLTIP ── */
+const tooltip=document.getElementById('tooltip');
+function showTooltip(e,node){
+  document.getElementById('tt-type').textContent=typeLabel(node.type);
+  document.getElementById('tt-type').style.color=typeColor(node.type);
+  document.getElementById('tt-name').textContent=node.title;
+  const d=node.degree||0;
+  document.getElementById('tt-conn').textContent=d+' connection'+(d!==1?'s':'');
+  tooltip.classList.add('visible'); moveTooltip(e);
+}
+function moveTooltip(e){
+  tooltip.style.left=(e.clientX+14)+'px'; tooltip.style.top=(e.clientY-10)+'px';
+}
+function hideTooltip(){ tooltip.classList.remove('visible'); }
+
+/* ── SELECT ── */
+function selectNode(node){
+  state.selectedNode=node;
+  showSidebar(node);
+  paintTick();
+}
+
+function showSidebar(node){
+  const sb=document.getElementById('sidebar');
+  sb.classList.remove('collapsed');
+  document.getElementById('node-title').textContent=node.title;
+  const badge=document.getElementById('node-type-badge');
+  const c=typeColor(node.type);
+  Object.assign(badge.style,{
+    display:'inline-block', padding:'2px 8px', borderRadius:'0',
+    fontSize:'10px', fontWeight:'700', letterSpacing:'0.06em',
+    textTransform:'uppercase', background:c+'22', color:c,
+    border:'1px solid '+c+'44'
+  });
+  badge.textContent=typeLabel(node.type);
+
+  const body=document.getElementById('sidebar-body');
+  body.innerHTML='';
+
+  const fm=node.fm||{};
+  const SHOW=['authors','year','venue','arxiv','doi','relevance','status','affiliation','topic','date','scope','audience'];
+  const fmRows=SHOW.filter(k=>fm[k]&&fm[k]!=='""'&&fm[k]!=="''");
+  if(fmRows.length){
+    const lbl=mk('div','section-label'); lbl.textContent='Metadata'; body.appendChild(lbl);
+    for(const k of fmRows){
+      const row=mk('div','meta-row');
+      const key=mk('div','meta-key'); key.textContent=k;
+      const val=mk('div','meta-val'); val.textContent=Array.isArray(fm[k])?fm[k].join(', '):fm[k];
+      row.appendChild(key); row.appendChild(val); body.appendChild(row);
+    }
+  }
+
+  const neighbors=[...(state.adjacency[node.id]||[])];
+  if(neighbors.length){
+    const lbl=mk('div','section-label'); lbl.textContent='Connections ('+neighbors.length+')'; body.appendChild(lbl);
+    const wrap=mk('div');
+    for(const nid of neighbors){
+      const nb=state.nodeMap[nid]; if(!nb) continue;
+      const chip=mk('div','link-chip');
+      chip.textContent=nb.title;
+      chip.style.borderLeftColor=typeColor(nb.type);
+      chip.addEventListener('click',()=>selectNode(nb));
+      wrap.appendChild(chip);
+    }
+    body.appendChild(wrap);
+  }
+
+  if(!fmRows.length&&!neighbors.length)
+    body.innerHTML='<p style="color:var(--text-muted);font-size:13px;">No metadata or connections found.</p>';
+}
+
+function mk(tag,cls){ const el=document.createElement(tag); if(cls) el.className=cls; return el; }
+
+/* ── ZOOM / PAN ── */
+function setupZoomPan(bg, svgEl){
+  let pan=false, ps={x:0,y:0}, po={tx:0,ty:0};
+  bg.addEventListener('mousedown',e=>{
+    if(e.button!==0) return;
+    pan=true; ps={x:e.clientX,y:e.clientY}; po={...state.zoom};
+    bg.style.cursor='grabbing';
+  });
+  window.addEventListener('mousemove',e=>{
+    if(!pan) return;
+    state.zoom.tx=po.tx+(e.clientX-ps.x);
+    state.zoom.ty=po.ty+(e.clientY-ps.y);
+    applyT();
+  });
+  window.addEventListener('mouseup',()=>{if(pan){pan=false;bg.style.cursor='grab';}});
+  svgEl.addEventListener('wheel',e=>{
+    e.preventDefault();
+    const delta=e.deltaMode===1 ? e.deltaY*16 : e.deltaY;
+    const f=Math.min(1.065, Math.max(0.938, Math.exp(-delta*0.002)));
+    const r=svgEl.getBoundingClientRect();
+    const mx=e.clientX-r.left, my=e.clientY-r.top;
+    zoomAt(mx, my, f);
+  },{passive:false});
+}
+
+function applyT(){
+  if(!svgG) return;
+  svgG.setAttribute('transform','translate('+state.zoom.tx+','+state.zoom.ty+') scale('+state.zoom.k+')');
+}
+
+function zoomAt(mx, my, f) {
+  const nextK=Math.min(4,Math.max(0.16,state.zoom.k*f));
+  const actualF=nextK/state.zoom.k;
+  state.zoom.tx=mx-(mx-state.zoom.tx)*actualF;
+  state.zoom.ty=my-(my-state.zoom.ty)*actualF;
+  state.zoom.k=nextK;
+  applyT();
+}
+
+/* ── CONTROLS ── */
+document.getElementById('zoom-in').addEventListener('click',()=>doZoom(1.2));
+document.getElementById('zoom-out').addEventListener('click',()=>doZoom(0.83));
+document.getElementById('zoom-reset').addEventListener('click',()=>{
+  state.zoom={k:1,tx:0,ty:0}; applyT();
+});
+function doZoom(f){
+  const r=document.getElementById('graph').getBoundingClientRect();
+  const mx=r.width/2, my=r.height/2;
+  zoomAt(mx, my, f);
+}
+
+document.getElementById('open-btn').addEventListener('click',openWikiDir);
+document.getElementById('open-btn2').addEventListener('click',openWikiDir);
+document.getElementById('drop-zone').addEventListener('click',openWikiDir);
+
+document.getElementById('drop-zone').addEventListener('dragover',e=>{
+  e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over');
+});
+document.getElementById('drop-zone').addEventListener('dragleave',()=>{
+  document.getElementById('drop-zone').classList.remove('drag-over');
+});
+document.getElementById('drop-zone').addEventListener('drop',async e=>{
+  e.preventDefault();
+  document.getElementById('drop-zone').classList.remove('drag-over');
+  for(const item of [...e.dataTransfer.items]){
+    if(item.kind==='file'&&'getAsFileSystemHandle' in item){
+      const h=await item.getAsFileSystemHandle();
+      if(h.kind==='directory'){await loadFromHandle(h);return;}
+    }
+  }
+  alert('Please drop a folder (directory).');
+});
+
+document.getElementById('search').addEventListener('input',e=>{
+  state.searchTerm=e.target.value.trim();
+  paintTick();
+});
+
+document.getElementById('graph').addEventListener('click',()=>{
+  if(state.selectedNode){
+    state.selectedNode=null;
+    document.getElementById('sidebar').classList.add('collapsed');
+    paintTick();
+  }
+});
+document.getElementById('sidebar-close').addEventListener('click',()=>{
+  state.selectedNode=null;
+  document.getElementById('sidebar').classList.add('collapsed');
+  paintTick();
+});
+
+window.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    state.selectedNode=null;
+    document.getElementById('sidebar').classList.add('collapsed');
+    paintTick();
+  }
+  if((e.metaKey||e.ctrlKey)&&e.key==='f'){e.preventDefault();document.getElementById('search').focus();}
+});
+
+window.addEventListener('resize',()=>{
+  if(sim){const r=document.getElementById('graph').getBoundingClientRect();sim.resize(r.width,r.height);}
+});
+
+/* ── UTILS ── */
+function showLoading(msg){document.getElementById('loading').classList.remove('hidden');document.getElementById('loading-msg').textContent=msg;}
+function setLoadingMsg(msg){document.getElementById('loading-msg').textContent=msg;}
+function hideLoading(){document.getElementById('loading').classList.add('hidden');}
+function hideLanding(){document.getElementById('landing').classList.add('hidden');}
+function pause(ms){return new Promise(r=>setTimeout(r,ms));}
+function updateStats(){
+  document.getElementById('stat-nodes').textContent=getVisibleNodes().length;
+  document.getElementById('stat-edges').textContent=getVisibleEdges().length;
+}
+</script>
+</body>
+</html>
