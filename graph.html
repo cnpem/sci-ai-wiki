@@ -124,13 +124,36 @@
     #canvas-wrap { flex: 1; position: relative; overflow: hidden; }
     svg#graph { width: 100%; height: 100%; display: block; }
     #sidebar {
-      width: 300px; background: var(--surface);
+      width: var(--sidebar-width, 360px); background: var(--surface);
       border-left: 1px solid var(--border);
       display: flex; flex-direction: column;
       overflow: hidden; flex-shrink: 0;
+      position: relative;
       transition: width 0.25s;
     }
+    #sidebar.resizing { transition: none; user-select: none; }
     #sidebar.collapsed { width: 0; border-left: none; }
+    #sidebar.collapsed .sidebar-resizer { display: none; }
+    .sidebar-resizer {
+      position: absolute;
+      top: 0; bottom: 0; left: -4px;
+      width: 8px;
+      cursor: col-resize;
+      z-index: 20;
+    }
+    .sidebar-resizer::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0; left: 3px;
+      width: 1px;
+      background: var(--border);
+      opacity: 0.75;
+    }
+    .sidebar-resizer:hover::after,
+    #sidebar.resizing .sidebar-resizer::after {
+      background: var(--accent);
+      opacity: 1;
+    }
     #sidebar-header {
       padding: 14px 16px 10px; border-bottom: 1px solid var(--border);
       display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
@@ -140,7 +163,14 @@
       padding: 3px 8px; border-radius: 0; font-size: 11px; font-weight: 800;
       letter-spacing: 0.06em; text-transform: uppercase; flex-shrink: 0; margin-top: 2px;
     }
-    #sidebar-body { flex: 1; overflow-y: auto; padding: 14px 16px; }
+    #sidebar-body {
+      flex: 1;
+      min-height: 0;
+      overflow: hidden;
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+    }
     #sidebar-body::-webkit-scrollbar { width: 4px; }
     #sidebar-body::-webkit-scrollbar-track { background: transparent; }
     #sidebar-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
@@ -158,6 +188,79 @@
       transition: all 0.15s; border-left-width: 3px;
     }
     .link-chip:hover { border-color: var(--accent); color: var(--text); background: #1c2a3a; }
+    .sidebar-top {
+      flex: 0 0 auto;
+      max-height: 36%;
+      overflow: auto;
+      padding-right: 4px;
+    }
+    .sidebar-top::-webkit-scrollbar { width: 4px; }
+    .sidebar-top::-webkit-scrollbar-track { background: transparent; }
+    .sidebar-top::-webkit-scrollbar-thumb { background: var(--border); }
+    .preview-section {
+      flex: 1;
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .md-preview {
+      border: 1px solid var(--border);
+      background: rgba(7,13,18,0.72);
+      padding: 10px 12px;
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      color: var(--text-dim);
+      font-size: 13px;
+      line-height: 1.55;
+    }
+    .md-preview::-webkit-scrollbar { width: 4px; }
+    .md-preview::-webkit-scrollbar-track { background: transparent; }
+    .md-preview::-webkit-scrollbar-thumb { background: var(--border); }
+    .md-preview h1,
+    .md-preview h2,
+    .md-preview h3 {
+      color: var(--text);
+      font-size: 13px;
+      line-height: 1.35;
+      margin: 10px 0 6px;
+      text-transform: uppercase;
+    }
+    .md-preview h1:first-child,
+    .md-preview h2:first-child,
+    .md-preview h3:first-child,
+    .md-preview p:first-child { margin-top: 0; }
+    .md-preview p { margin: 7px 0; }
+    .md-preview ul,
+    .md-preview ol { margin: 7px 0 7px 18px; }
+    .md-preview li { margin: 3px 0; }
+    .md-preview blockquote {
+      border-left: 2px solid var(--accent);
+      margin: 8px 0;
+      padding-left: 9px;
+      color: var(--text-muted);
+    }
+    .md-preview code {
+      color: var(--terminal);
+      background: #071018;
+      border: 1px solid #1c2b37;
+      padding: 0 3px;
+    }
+    .md-preview pre {
+      overflow: auto;
+      background: #071018;
+      border: 1px solid #1c2b37;
+      padding: 8px;
+      margin: 8px 0;
+    }
+    .md-preview pre code {
+      border: none;
+      padding: 0;
+      background: transparent;
+      color: var(--text-dim);
+    }
+    .md-preview .wiki-link { color: var(--accent); }
+    .md-preview .md-muted { color: var(--text-muted); }
     #landing {
       position: absolute; inset: 0; display: flex; flex-direction: column;
       align-items: center; justify-content: center; gap: 20px;
@@ -307,6 +410,7 @@
     </div>
   </div>
   <div id="sidebar" class="collapsed">
+    <div class="sidebar-resizer" id="sidebar-resizer" title="Resize sidebar"></div>
     <div id="sidebar-header">
       <div style="flex:1;min-width:0;">
         <div id="node-type-badge"></div>
@@ -477,6 +581,10 @@ function parseFrontmatter(text) {
   return obj;
 }
 
+function stripFrontmatter(text) {
+  return text.replace(/^---\s*\n[\s\S]*?\n---\s*/, '').trim();
+}
+
 function extractLinks(text) {
   const links = new Set();
   const re = /\[\[([^\]|#\n]+?)(?:[|#][^\]\n]*)?\]\]/g;
@@ -499,7 +607,7 @@ function buildGraph(files) {
     const type = detectType(f.path, fm);
     const title = (fm.title||fm.name||id).replace(/_/g,' ').replace(/^['"]|['"]$/g,'');
     const links = extractLinks(f.content);
-    nodes.push({ id, type, title, fm, path:f.path, links, x:0,y:0,vx:0,vy:0 });
+    nodes.push({ id, type, title, fm, path:f.path, links, md:stripFrontmatter(f.content), x:0,y:0,vx:0,vy:0 });
     for (const t of links) if (t!==id) rawLinks.push({from:id, to:t});
   }
   const nodeIds = new Set(nodes.map(n=>n.id));
@@ -879,23 +987,25 @@ function showSidebar(node){
 
   const body=document.getElementById('sidebar-body');
   body.innerHTML='';
+  const top=mk('div','sidebar-top');
+  const previewSection=mk('div','preview-section');
 
   const fm=node.fm||{};
   const SHOW=['authors','year','venue','arxiv','doi','relevance','status','affiliation','topic','date','scope','audience'];
   const fmRows=SHOW.filter(k=>fm[k]&&fm[k]!=='""'&&fm[k]!=="''");
   if(fmRows.length){
-    const lbl=mk('div','section-label'); lbl.textContent='Metadata'; body.appendChild(lbl);
+    const lbl=mk('div','section-label'); lbl.textContent='Metadata'; top.appendChild(lbl);
     for(const k of fmRows){
       const row=mk('div','meta-row');
       const key=mk('div','meta-key'); key.textContent=k;
       const val=mk('div','meta-val'); val.textContent=Array.isArray(fm[k])?fm[k].join(', '):fm[k];
-      row.appendChild(key); row.appendChild(val); body.appendChild(row);
+      row.appendChild(key); row.appendChild(val); top.appendChild(row);
     }
   }
 
   const neighbors=[...(state.adjacency[node.id]||[])];
   if(neighbors.length){
-    const lbl=mk('div','section-label'); lbl.textContent='Connections ('+neighbors.length+')'; body.appendChild(lbl);
+    const lbl=mk('div','section-label'); lbl.textContent='Connections ('+neighbors.length+')'; top.appendChild(lbl);
     const wrap=mk('div');
     for(const nid of neighbors){
       const nb=state.nodeMap[nid]; if(!nb) continue;
@@ -905,14 +1015,110 @@ function showSidebar(node){
       chip.addEventListener('click',()=>selectNode(nb));
       wrap.appendChild(chip);
     }
-    body.appendChild(wrap);
+    top.appendChild(wrap);
   }
 
-  if(!fmRows.length&&!neighbors.length)
-    body.innerHTML='<p style="color:var(--text-muted);font-size:13px;">No metadata or connections found.</p>';
+  const previewLbl=mk('div','section-label');
+  previewLbl.textContent='Markdown Preview';
+  previewSection.appendChild(previewLbl);
+  const preview=mk('div','md-preview');
+  if(node.md && node.md.trim()){
+    preview.innerHTML=renderMarkdownPreview(node.md);
+  } else {
+    preview.innerHTML='<p class="md-muted">No markdown body found.</p>';
+  }
+  previewSection.appendChild(preview);
+  if(top.childNodes.length) body.appendChild(top);
+  body.appendChild(previewSection);
+
+  if(!fmRows.length&&!neighbors.length&&!node.md)
+    body.innerHTML='<p style="color:var(--text-muted);font-size:13px;">No metadata, connections, or markdown body found.</p>';
 }
 
 function mk(tag,cls){ const el=document.createElement(tag); if(cls) el.className=cls; return el; }
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#39;');
+}
+
+function inlineMarkdown(value) {
+  return escapeHtml(value)
+    .replace(/\[\[([^\]|#\n]+)(?:[|#]([^\]\n]+))?\]\]/g, (m, target, label) =>
+      '<span class="wiki-link">' + escapeHtml(label || target) + '</span>')
+    .replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, '$1')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+}
+
+function renderMarkdownPreview(markdown) {
+  const lines = stripFrontmatter(markdown).split(/\r?\n/).slice(0, 220);
+  const html = [];
+  let listType = null, inCode = false, codeLines = [];
+
+  const closeList = () => {
+    if(listType){ html.push('</' + listType + '>'); listType = null; }
+  };
+  const closeCode = () => {
+    if(inCode){
+      html.push('<pre><code>' + escapeHtml(codeLines.join('\n')) + '</code></pre>');
+      inCode = false; codeLines = [];
+    }
+  };
+
+  for(const raw of lines){
+    const line = raw.replace(/\s+$/,'');
+    if(line.trim().startsWith('```')){
+      if(inCode) closeCode();
+      else { closeList(); inCode = true; codeLines = []; }
+      continue;
+    }
+    if(inCode){ codeLines.push(line); continue; }
+    if(!line.trim()){ closeList(); continue; }
+
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if(heading){
+      closeList();
+      const level = heading[1].length;
+      html.push('<h' + level + '>' + inlineMarkdown(heading[2]) + '</h' + level + '>');
+      continue;
+    }
+
+    const bullet = line.match(/^\s*[-*]\s+(.+)$/);
+    if(bullet){
+      if(listType !== 'ul'){ closeList(); listType = 'ul'; html.push('<ul>'); }
+      html.push('<li>' + inlineMarkdown(bullet[1]) + '</li>');
+      continue;
+    }
+
+    const numbered = line.match(/^\s*\d+\.\s+(.+)$/);
+    if(numbered){
+      if(listType !== 'ol'){ closeList(); listType = 'ol'; html.push('<ol>'); }
+      html.push('<li>' + inlineMarkdown(numbered[1]) + '</li>');
+      continue;
+    }
+
+    const quote = line.match(/^\s*>\s?(.+)$/);
+    if(quote){
+      closeList();
+      html.push('<blockquote>' + inlineMarkdown(quote[1]) + '</blockquote>');
+      continue;
+    }
+
+    closeList();
+    html.push('<p>' + inlineMarkdown(line) + '</p>');
+  }
+
+  closeCode();
+  closeList();
+  if(lines.length >= 220) html.push('<p class="md-muted">Preview truncated.</p>');
+  return html.join('');
+}
 
 /* ── ZOOM / PAN ── */
 function setupZoomPan(bg, svgEl){
@@ -965,9 +1171,45 @@ function doZoom(f){
   zoomAt(mx, my, f);
 }
 
+function setupSidebarResize(){
+  const sidebar=document.getElementById('sidebar');
+  const handle=document.getElementById('sidebar-resizer');
+  if(!sidebar||!handle) return;
+
+  handle.addEventListener('mousedown',e=>{
+    e.preventDefault();
+    e.stopPropagation();
+    const startX=e.clientX;
+    const startW=sidebar.getBoundingClientRect().width || 360;
+    const maxW=Math.min(760, Math.max(360, window.innerWidth*0.62));
+    sidebar.classList.add('resizing');
+    document.body.style.cursor='col-resize';
+
+    const move=ev=>{
+      const nextW=Math.min(maxW, Math.max(280, startW + (startX - ev.clientX)));
+      sidebar.style.setProperty('--sidebar-width', nextW + 'px');
+      if(sim){
+        const r=document.getElementById('graph').getBoundingClientRect();
+        sim.resize(r.width,r.height);
+      }
+    };
+    const up=()=>{
+      window.removeEventListener('mousemove',move);
+      window.removeEventListener('mouseup',up);
+      sidebar.classList.remove('resizing');
+      document.body.style.cursor='';
+    };
+
+    window.addEventListener('mousemove',move);
+    window.addEventListener('mouseup',up);
+  });
+}
+
 document.getElementById('open-btn').addEventListener('click',openWikiDir);
 document.getElementById('open-btn2').addEventListener('click',openWikiDir);
 document.getElementById('drop-zone').addEventListener('click',openWikiDir);
+
+setupSidebarResize();
 
 document.getElementById('drop-zone').addEventListener('dragover',e=>{
   e.preventDefault(); document.getElementById('drop-zone').classList.add('drag-over');
