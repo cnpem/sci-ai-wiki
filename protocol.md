@@ -34,7 +34,7 @@ my-research-wiki/
     └── reviews/
 ```
 
-**The golden rule:** You add things to `raw/`. The AI writes to `wiki/`. Never let those roles switch.
+**The golden rule:** You add things to `raw/`. The AI writes to `wiki/`. 
 
 ---
 
@@ -45,8 +45,9 @@ You need:
 - **A few research papers** in PDF format (even 1 is enough to start).
 - **10 minutes** to complete this setup.
 
-That's it. You do not need to know how to code.
+You have already received the antigravity link for downloading. When done, open it. It will work just as VSCode or any other VSCode-like code editor. You will see a chat window and a file browser. Open the folder you want your SciAIWiki to be set up in. The folder will open and you should drag or upload the prompt.md and .agents folder there (Just put the .zip folder in there or the contents of it after unzipping it).
 
+You should see the .agents folder, and the graph.html file in the left file browser and the chat window on the right. Now you can follow to the next step.
 ---
 
 ## Step 1 — Trigger the Setup Skill
@@ -56,7 +57,7 @@ The wiki setup is handled by the `llm-wiki-setup` skill, which lives at `.agents
 **Here's how:**
 
 1. Open your AI assistant in the root of your wiki project (the folder that contains `.agents/`)
-2. Make sure your AI has access to the project files (e.g., load it as a project or workspace)
+2. Make sure your AI has access to the project files (e.g., just ask what files do you see and it should answer the files that show on the left.)
 3. Say: **"I want to set up my wiki"** (or "initialize my wiki", "set up my research wiki" — any natural phrasing works)
 
 The AI will read the skill, **automatically install any missing tools** (Python, pdftotext, pymupdf) for your OS, then start the interview.
