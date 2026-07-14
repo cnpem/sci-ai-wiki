@@ -107,7 +107,7 @@
     .pill.active { opacity: 1; background: color-mix(in srgb, var(--type-color) 14%, transparent); }
     .pill:hover { opacity: 1; background: var(--type-color); color: #061016; }
     #open-btn {
-      margin-left: auto; padding: 7px 16px;
+      margin-left: 0; padding: 7px 16px;
       background: var(--surface2);
       border: 1px solid var(--border); border-radius: 0; color: var(--text); font-size: 14px;
       font-weight: 800; cursor: pointer; transition: all 0.15s;
@@ -120,6 +120,39 @@
       background: var(--accent) !important;
       color: #061016 !important;
     }
+    .topbar-toggle {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      margin-left: auto;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+      cursor: pointer;
+      user-select: none;
+    }
+    .topbar-toggle input {
+      appearance: none;
+      width: 14px;
+      height: 14px;
+      border: 1px solid var(--border);
+      background: var(--surface2);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+    .topbar-toggle input:checked {
+      border-color: var(--accent);
+      background: var(--accent);
+    }
+    .topbar-toggle input:checked::after {
+      content: '';
+      width: 6px;
+      height: 6px;
+      background: #061016;
+    }
+    .topbar-toggle:hover { color: var(--text); }
     #main { display: flex; flex: 1; overflow: hidden; }
     #canvas-wrap { flex: 1; position: relative; overflow: hidden; }
     svg#graph { width: 100%; height: 100%; display: block; }
@@ -259,7 +292,19 @@
       background: transparent;
       color: var(--text-dim);
     }
-    .md-preview .wiki-link { color: var(--accent); }
+    .md-preview a,
+    .md-preview .wiki-link {
+      color: var(--accent);
+      text-decoration: none;
+      border-bottom: 1px dotted color-mix(in srgb, var(--accent) 70%, transparent);
+      cursor: pointer;
+    }
+    .md-preview a:hover,
+    .md-preview .wiki-link:hover {
+      color: #061016;
+      background: var(--accent);
+      border-bottom-color: var(--accent);
+    }
     .md-preview .md-muted { color: var(--text-muted); }
     #landing {
       position: absolute; inset: 0; display: flex; flex-direction: column;
@@ -371,6 +416,10 @@
     <input id="search" type="text" placeholder="Search nodes&#x2026;" autocomplete="off" />
   </div>
   <div class="filter-pills" id="type-filters"></div>
+  <label class="topbar-toggle" title="Show or hide Index connections">
+    <input id="index-edges-toggle" type="checkbox" />
+    Index links
+  </label>
   <button id="open-btn">Open Wiki</button>
 </div>
 
@@ -438,11 +487,12 @@ const TYPE_PALETTE = [
   '#94e2d5', '#e5c07b', '#98c379', '#56b6c2', '#e06c75'
 ];
 const BASE_RADIUS = 7.5;
-const SKIP_IDS = new Set(['index','log','schema','overview','readme','agents','protocol','gitkeep']);
+const SKIP_IDS = new Set(['log','schema','readme','agents','protocol','gitkeep']);
 
 const state = {
   nodes:[], edges:[], nodeMap:{}, adjacency:{},
   activeFilters: new Set(), typeCounts:{}, typeColors:{},
+  showIndexConnections:false,
   searchTerm:'', selectedNode:null, hoveredNode:null, dragFocusNode:null,
   zoom:{k:1,tx:0,ty:0}
 };
@@ -558,9 +608,10 @@ function structuralPathParts(path) {
   return parts;
 }
 
-function detectType(path, fm = {}) {
+function detectType(path, fm = {}, id = '') {
   const explicit = fm.type || fm.kind || fm.category || fm.collection || fm.group;
   if (explicit) return normalizeType(explicit);
+  if (id === 'index' || id === 'overview') return id;
   const parts = structuralPathParts(path);
   return parts.length > 1 ? normalizeType(parts[0]) : 'root';
 }
@@ -604,7 +655,7 @@ function buildGraph(files) {
     const id = pathToId(f.path);
     if (SKIP_IDS.has(id)) continue;
     const fm = parseFrontmatter(f.content);
-    const type = detectType(f.path, fm);
+    const type = detectType(f.path, fm, id);
     const title = (fm.title||fm.name||id).replace(/_/g,' ').replace(/^['"]|['"]$/g,'');
     const links = extractLinks(f.content);
     nodes.push({ id, type, title, fm, path:f.path, links, md:stripFrontmatter(f.content), x:0,y:0,vx:0,vy:0 });
@@ -772,9 +823,23 @@ class ForceSimulation {
 function getVisibleNodes() {
   return state.nodes.filter(n=>state.activeFilters.has(n.type));
 }
+function isIndexNode(id) {
+  const node = state.nodeMap[id];
+  return id === 'index' || (node && node.type === 'index');
+}
+function isIndexEdge(edge) {
+  return isIndexNode(edge.source) || isIndexNode(edge.target);
+}
 function getVisibleEdges() {
   const vis=new Set(getVisibleNodes().map(n=>n.id));
-  return state.edges.filter(e=>vis.has(e.source)&&vis.has(e.target));
+  return state.edges.filter(e=>vis.has(e.source)&&vis.has(e.target)&&(state.showIndexConnections||!isIndexEdge(e)));
+}
+function getEffectiveNeighborIds(id) {
+  const neighbors = state.adjacency[id] || new Set();
+  if(state.showIndexConnections || !isIndexNode(id)) {
+    return new Set([...neighbors].filter(nid => state.showIndexConnections || !isIndexNode(nid)));
+  }
+  return new Set();
 }
 
 function renderGraph() {
@@ -851,7 +916,7 @@ function paintTick() {
   const q=state.searchTerm.toLowerCase();
   const sel=state.selectedNode;
   const focus=state.dragFocusNode || state.hoveredNode || sel;
-  const focusNeighbors=focus && state.adjacency[focus.id] ? state.adjacency[focus.id] : new Set();
+  const focusNeighbors=focus ? getEffectiveNeighborIds(focus.id) : new Set();
 
   for (const e of vEdges) {
     const line=linkEls[e.source+'||'+e.target]; if(!line) continue;
@@ -955,7 +1020,7 @@ function showTooltip(e,node){
   document.getElementById('tt-type').textContent=typeLabel(node.type);
   document.getElementById('tt-type').style.color=typeColor(node.type);
   document.getElementById('tt-name').textContent=node.title;
-  const d=node.degree||0;
+  const d=getEffectiveNeighborIds(node.id).size;
   document.getElementById('tt-conn').textContent=d+' connection'+(d!==1?'s':'');
   tooltip.classList.add('visible'); moveTooltip(e);
 }
@@ -1003,7 +1068,7 @@ function showSidebar(node){
     }
   }
 
-  const neighbors=[...(state.adjacency[node.id]||[])];
+  const neighbors=[...getEffectiveNeighborIds(node.id)];
   if(neighbors.length){
     const lbl=mk('div','section-label'); lbl.textContent='Connections ('+neighbors.length+')'; top.appendChild(lbl);
     const wrap=mk('div');
@@ -1024,6 +1089,7 @@ function showSidebar(node){
   const preview=mk('div','md-preview');
   if(node.md && node.md.trim()){
     preview.innerHTML=renderMarkdownPreview(node.md);
+    wireMarkdownPreviewLinks(preview);
   } else {
     preview.innerHTML='<p class="md-muted">No markdown body found.</p>';
   }
@@ -1046,14 +1112,47 @@ function escapeHtml(value) {
     .replace(/'/g,'&#39;');
 }
 
+function nodeRefFromLink(value) {
+  const cleaned = String(value || '')
+    .trim()
+    .replace(/^<|>$/g,'')
+    .split(/[?#]/)[0]
+    .replace(/^.*\//,'')
+    .replace(/\.md$/i,'');
+  if(!cleaned) return '';
+  return cleaned.toLowerCase().replace(/\s+/g,'_');
+}
+
+function safeExternalHref(value) {
+  const url = String(value || '').trim();
+  if(/^(https?:\/\/|mailto:)/i.test(url)) return escapeHtml(url);
+  return '';
+}
+
 function inlineMarkdown(value) {
   return escapeHtml(value)
     .replace(/\[\[([^\]|#\n]+)(?:[|#]([^\]\n]+))?\]\]/g, (m, target, label) =>
-      '<span class="wiki-link">' + escapeHtml(label || target) + '</span>')
-    .replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, '$1')
+      '<a href="#' + escapeHtml(nodeRefFromLink(target)) + '" class="wiki-link" data-node-ref="' + escapeHtml(nodeRefFromLink(target)) + '">' + (label || target) + '</a>')
+    .replace(/\[([^\]\n]+)\]\(([^)\n]+)\)/g, (m, label, url) => {
+      const href = safeExternalHref(url.replace(/&amp;/g,'&'));
+      if(href) return '<a href="' + href + '" target="_blank" rel="noopener noreferrer">' + label + '</a>';
+      const ref = nodeRefFromLink(url.replace(/&amp;/g,'&'));
+      if(ref) return '<a href="#' + escapeHtml(ref) + '" data-node-ref="' + escapeHtml(ref) + '">' + label + '</a>';
+      return label;
+    })
     .replace(/`([^`]+)`/g, '<code>$1</code>')
     .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
     .replace(/\*([^*]+)\*/g, '<em>$1</em>');
+}
+
+function wireMarkdownPreviewLinks(container) {
+  container.querySelectorAll('a[data-node-ref]').forEach(link=>{
+    link.addEventListener('click',e=>{
+      e.preventDefault();
+      const node = state.nodeMap[link.dataset.nodeRef];
+      if(node) selectNode(node);
+    });
+  });
 }
 
 function renderMarkdownPreview(markdown) {
@@ -1232,6 +1331,13 @@ document.getElementById('drop-zone').addEventListener('drop',async e=>{
 document.getElementById('search').addEventListener('input',e=>{
   state.searchTerm=e.target.value.trim();
   paintTick();
+});
+
+document.getElementById('index-edges-toggle').addEventListener('change',e=>{
+  state.showIndexConnections=e.target.checked;
+  if(state.nodes.length) renderGraph();
+  updateStats();
+  if(state.selectedNode) showSidebar(state.selectedNode);
 });
 
 document.getElementById('graph').addEventListener('click',()=>{
