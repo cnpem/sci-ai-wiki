@@ -45,6 +45,9 @@ You need:
 - **A few research papers** in PDF format (even 1 is enough to start).
 - **10 minutes** to complete this setup.
 
+To download Antigravity:
+https://antigravity.google/
+
 You have already received the antigravity link for downloading. When done, open it. It will work just as VSCode or any other VSCode-like code editor. You will see a chat window and a file browser. Open the folder you want your SciAIWiki to be set up in. The folder will open and you should drag or upload the prompt.md and .agents folder there (Just put the .zip folder in there or the contents of it after unzipping it).
 
 You should see the .agents folder, and the graph.html file in the left file browser and the chat window on the right. Now you can follow to the next step.
