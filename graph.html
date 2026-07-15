@@ -431,12 +431,12 @@
       <p>Open any Markdown wiki directory to visualise connections across whatever folder groups it contains.</p>
       <div class="drop-zone" id="drop-zone">
         <div class="dz-icon">&#x1F4C1;</div>
-        <div>Drop your <strong>wiki/</strong> folder here</div>
-        <div style="font-size:12px;color:var(--text-muted)">or click to browse</div>
+        <div>Drop your <strong>wiki/</strong> folder or Markdown files here</div>
+        <div style="font-size:12px;color:var(--text-muted)">or click to browse/select files</div>
       </div>
       <div class="or-divider">or</div>
       <button id="open-btn2" style="padding:10px 24px;background:var(--surface2);border:1px solid var(--accent);border-radius:0;color:var(--text);font-family:inherit;font-size:15px;font-weight:800;cursor:pointer;">
-        [ Choose Wiki Directory ]
+        [ Choose Wiki Directory / Files ]
       </button>
       <p style="font-size:12px;color:var(--text-muted);max-width:340px;text-align:center;">
         Your files never leave your computer. Everything runs locally in this browser tab.
@@ -479,6 +479,8 @@
   <div class="tt-connections" id="tt-conn"></div>
 </div>
 
+<input id="file-picker" type="file" multiple webkitdirectory accept=".md,text/markdown,text/plain" hidden />
+
 <script>
 const TYPE_PALETTE = [
   '#7bd9c8', '#d6a75e', '#8fb7ff', '#c59cff', '#ff8f70',
@@ -504,7 +506,7 @@ let linkEls={}, nodeEls={}, labelEls={};
 /* ── FILE SYSTEM ── */
 async function openWikiDir() {
   if (!('showDirectoryPicker' in window)) {
-    alert('Your browser does not support the File System Access API.\nPlease use Chrome or Edge (desktop) and open this file via a local server or directly.');
+    document.getElementById('file-picker').click();
     return;
   }
   let h;
@@ -518,6 +520,26 @@ async function loadFromHandle(root) {
   const files = [];
   const wikiRoot = await resolveWikiRoot(root);
   await collectMd(wikiRoot, '', files);
+  await loadFiles(files);
+}
+
+async function loadFromFileList(fileList) {
+  const selected = [...fileList].filter(file => /\.md$/i.test(file.name));
+  if(!selected.length) {
+    alert('No Markdown (.md) files found. Choose a wiki folder or select Markdown files.');
+    return;
+  }
+  showLoading('Reading selected files\u2026');
+  hideLanding();
+  const files = [];
+  for (const file of selected) {
+    const rawPath = file.webkitRelativePath || file.name;
+    files.push({ path: normalizeSelectedPath(rawPath), content: await file.text() });
+  }
+  await loadFiles(files);
+}
+
+async function loadFiles(files) {
   setLoadingMsg('Parsing ' + files.length + ' files\u2026');
   await pause(10);
   const {nodes, edges} = buildGraph(files);
@@ -536,6 +558,13 @@ async function loadFromHandle(root) {
   document.getElementById('legend').classList.remove('hidden');
   document.getElementById('stats').classList.remove('hidden');
   document.getElementById('zoom-controls').classList.remove('hidden');
+}
+
+function normalizeSelectedPath(path) {
+  const parts = String(path || '').split('/').filter(Boolean);
+  const wikiIndex = parts.findIndex(part => normalizeType(part) === 'wiki');
+  const scoped = wikiIndex >= 0 ? parts.slice(wikiIndex + 1) : parts;
+  return scoped.join('/') || parts.join('/') || 'untitled.md';
 }
 
 async function resolveWikiRoot(root) {
@@ -1307,6 +1336,10 @@ function setupSidebarResize(){
 document.getElementById('open-btn').addEventListener('click',openWikiDir);
 document.getElementById('open-btn2').addEventListener('click',openWikiDir);
 document.getElementById('drop-zone').addEventListener('click',openWikiDir);
+document.getElementById('file-picker').addEventListener('change',async e=>{
+  await loadFromFileList(e.target.files);
+  e.target.value='';
+});
 
 setupSidebarResize();
 
@@ -1325,7 +1358,11 @@ document.getElementById('drop-zone').addEventListener('drop',async e=>{
       if(h.kind==='directory'){await loadFromHandle(h);return;}
     }
   }
-  alert('Please drop a folder (directory).');
+  if(e.dataTransfer.files && e.dataTransfer.files.length){
+    await loadFromFileList(e.dataTransfer.files);
+    return;
+  }
+  alert('Please drop a folder or Markdown files.');
 });
 
 document.getElementById('search').addEventListener('input',e=>{
