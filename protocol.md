@@ -1,307 +1,258 @@
-# LLM Wiki Protocol
-### A Researcher's Guide to Building a Compounding AI-Assisted Knowledge Base
+# LLM Wiki — Beginner Tutorial
+### How to Build Your Personal AI-Powered Research Knowledge Base, Step by Step
 
 ---
 
-## What is an LLM Wiki?
+Welcome! This tutorial will walk you through setting up your own **LLM Wiki** — a personal knowledge base where an AI assistant helps you organize, connect, and explore your research. No coding experience required.
 
-An LLM wiki is a **personal research knowledge base** maintained by an AI assistant. You own the raw materials (PDFs, notes, book chapters). The AI owns the structured wiki — creating, updating, and cross-referencing pages as you feed it sources.
-
-The key insight is that knowledge compounds. Unlike a chatbot conversation that vanishes, every paper you ingest makes the wiki richer, denser, and more useful for answering your next question. After 20–30 ingested papers, the wiki becomes a genuine intellectual artifact — a graph of your field that can answer questions, surface contradictions, and generate literature reviews.
-
-This protocol is **field-agnostic**. It works for any sustained research project: a Master's thesis, a PhD, a systematic review, or a research team's shared knowledge base.
+By the end of this tutorial you will have a working wiki folder on your computer, ready to start ingesting research papers.
 
 ---
 
-## Prerequisites
+## What You'll End Up With
 
-### What you need
-- An AI assistant that can read files and write to a local directory (e.g., Claude with computer use, Claude Code, or a similar agentic setup)
-- A folder of raw materials: PDFs, markdown notes, book excerpts
-- The four skill files: `llm-wiki-ingest`, `llm-wiki-query`, `llm-wiki-lint`, `llm-wiki-review`
-
-### What you don't need
-- Any coding experience
-- A pre-existing organizational system
-- Clean, well-formatted sources (the ingest skill handles messy PDFs)
-
----
-
-## Directory Structure
-
-Set up this exact layout. The AI will populate `wiki/` entirely — you only ever add files to `raw/`.
+After following these steps, your project folder will look like this:
 
 ```
-<your-project>/
-├── raw/                    ← YOU OWN THIS. Never let the AI write here.
-│   ├── papers/             # PDFs and markdown of academic papers
-│   ├── notes/              # Personal reading notes, scratch thoughts
-│   ├── books/              # Book chapters, textbook excerpts
-│   ├── code/               # Reference implementations, snippets
-│   └── repos/              # Cloned or summarized repositories
-│
-└── wiki/                   ← AI OWNS THIS. You read, AI writes.
-    ├── index.md            # Master catalog — every wiki page with a one-line summary
-    ├── log.md              # Append-only activity log (ingest, query, lint events)
-    ├── overview.md         # Your evolving research thesis and frontier questions
-    ├── schema.md           # Frontmatter schema for each page type
-    ├── papers/             # One file per ingested source
-    ├── concepts/           # Core theoretical concepts and math
-    ├── models/             # Specific architectures, systems, or methods
-    ├── authors/            # Key researchers
-    └── reviews/            # Literature reviews produced by the AI
+my-research-wiki/
+├── AGENTS.md               ← Instructions for the AI
+├── raw/                    ← Where YOU put your PDFs and notes
+│   ├── papers/
+│   ├── notes/
+│   ├── books/
+│   ├── code/
+│   └── repos/
+└── wiki/                   ← Where the AI writes everything
+    ├── index.md
+    ├── log.md
+    ├── overview.md
+    ├── schema.md
+    ├── papers/
+    ├── concepts/
+    ├── models/
+    ├── authors/
+    └── reviews/
 ```
 
-**The `raw/` directory is sacred.** The AI reads it; it never writes to it. This boundary protects your original materials and your own voice.
+**The golden rule:** You add things to `raw/`. The AI writes to `wiki/`.
 
 ---
 
-## Initial Setup
+## Before You Start
 
-### 1. Create the directory structure
-```bash
-mkdir -p raw/{papers,notes,books,code,repos}
-mkdir -p wiki/{papers,concepts,models,authors,reviews}
+You need:
+- **An AI assistant** that can read and write files on your computer. Examples: Claude Code, Gemini Antigravity, or any agentic AI setup.
+- **A few research papers** in PDF format (even 1 is enough to start).
+- **10 minutes** to complete this setup.
+
+To download Antigravity:
+https://antigravity.google/
+
+When done, open Antigravity. It works like VSCode or another VSCode-like code editor: you will see a chat window and a file browser. Open the folder where you want your SciAI Wiki to live, then copy the `.agents` folder and `graph.html` into that project folder.
+
+You should see the .agents folder, and the graph.html file in the left file browser and the chat window on the right. Now you can follow to the next step.
+---
+
+## Step 1 — Trigger the Setup Skill
+
+The wiki setup is handled by the `llm-wiki-setup` skill, which lives at `.agents/skills/llm-wiki-setup/SKILL.md`. Your AI assistant reads this skill and knows exactly what to do.
+
+**Here's how:**
+
+1. Open your AI assistant in the root of your wiki project (the folder that contains `.agents/`)
+2. Make sure your AI has access to the project files (e.g., just ask what files do you see and it should answer the files that show on the left.)
+3. Say: **"I want to set up my wiki"** (or "initialize my wiki", "set up my research wiki" — any natural phrasing works)
+
+The AI will read the skill, **automatically install any missing tools** (Python, pdftotext, pymupdf) for your OS, then start the interview.
+
+✅ **Done when:** The AI reports the environment is ready and begins asking you questions.
+
+---
+
+## Step 2 — Answer the AI's Questions
+
+After confirming the environment is ready, the AI will ask you 5 questions. These help it configure the wiki for your specific research. Take your time answering them — even rough answers are fine.
+
+**The 5 questions:**
+
+1. **What is your research topic?**
+   *Example: "I study machine learning for protein structure prediction."*
+
+2. **What is your thesis statement or main research question?**
+   *Example: "I'm exploring whether graph neural networks can outperform traditional methods for predicting protein folding."*
+   *Tip: Even a rough, uncertain answer is fine. You can update this later.*
+
+3. **What are 3–5 big open questions you're trying to answer?**
+   *Example: "Can we reduce compute costs? Does equivariance matter? How do we handle disordered regions?"*
+
+4. **Do you need any extra folder categories beyond the defaults?**
+   *Defaults are: Papers, Concepts, Models, Authors, Reviews.*
+   *You might add: `datasets/`, `experiments/`, `methods/`, `clinical_trials/`.*
+   *If you're not sure, just say "no, the defaults are fine."*
+
+5. **Any special fields you want tracked for each paper?**
+   *Example for ML: "I want to track whether code is available and what benchmark was used."*
+   *If unsure, say "use the defaults."*
+
+✅ **Done when:** You've answered all 5 questions and the AI has confirmed it understood your answers.
+
+---
+
+## Step 3 — Confirm the Plan
+
+The AI will show you a summary of what it's about to create, looking something like this:
+
+> **Here's what I'll create:**
+> ```
+> my-research-wiki/
+> ├── raw/   (your PDFs go here)
+> └── wiki/  (the AI writes here)
+>     └── index.md, log.md, overview.md, schema.md
+> ```
+> Wiki configured for: **[your research topic]**
+> Shall I proceed?
+
+Read it over quickly and reply **"Yes, go ahead"** (or ask to change anything before it starts).
+
+✅ **Done when:** You've confirmed and the AI starts creating files.
+
+---
+
+## Step 4 — The AI Creates Your Wiki Files
+
+Now the AI will create several files automatically. You don't need to do anything — just wait.
+
+Here's what gets created and what each file does:
+
+| File | What it does |
+|------|--------------|
+| `AGENTS.md` | The AI's instruction manual — it reads this every session |
+| `wiki/overview.md` | Your thesis statement and research questions |
+| `wiki/schema.md` | The format (template) for each type of wiki page |
+| `wiki/index.md` | A master list of all wiki pages (starts empty) |
+| `wiki/log.md` | A history of everything the AI has done |
+
+> **Front matter reminder:** Wiki pages begin with a YAML block between two lines containing only `---`. Paper pages require `title`, `authors`, and `year`. Use a non-empty list of full names such as `authors: [Ada Lovelace, Alan Turing]`; do not use `Last, First`, author IDs, or a single unwrapped author string. Author pages use the same full-name format in their `name` field. See `README.md` for more examples.
+
+✅ **Done when:** The AI says all files have been created and shows you the verification output.
+
+---
+
+## Step 5 — Drop Your First PDF Into `raw/papers/`
+
+Now it's your turn. Find a research paper you want to add to the wiki (any PDF will do).
+
+Copy or move that PDF into the `raw/papers/` folder inside your project.
+
+**Example:** If your project is at `Documents/my-research-wiki/`, put the PDF at:
+```
+Documents/my-research-wiki/raw/papers/my-first-paper.pdf
 ```
 
-### 2. Initialize the wiki files
-Ask the AI to create these four files for you:
-
-- `wiki/index.md` — start with empty sections for Papers, Concepts, Models, Authors, Reviews
-- `wiki/log.md` — start with a single entry: `## [DATE] init | Wiki initialized`
-- `wiki/overview.md` — write your current thesis statement (even if rough) and 3–5 frontier questions you're trying to answer
-- `wiki/schema.md` — ask the AI to generate schemas appropriate for your field (see Schema section below)
-
-### 3. Drop your sources in `raw/`
-Don't organize obsessively. Just put PDFs in `raw/papers/`. The wiki will do the organizing.
+✅ **Done when:** Your PDF is sitting inside `raw/papers/`.
 
 ---
 
-## Schema Design and Front Matter
+## Step 6 — Ingest Your First Paper
 
-The schema defines the YAML **front matter** for each page type. Front matter is a YAML block at the
-top of a Markdown page, between two lines containing only `---`. It lets the agent search and check
-pages while keeping the main text easy for a person to read.
+Now tell the AI to read and process the paper:
 
-For paper pages, `title`, `authors`, and `year` are required. `authors` must always be a non-empty
-list of full names written as `Given names Family name`. This works for one or many authors:
+> "Ingest raw/papers/my-first-paper.pdf"
 
-Ask the AI to create `wiki/schema.md` with schemas for your field. A general starting point:
+The AI will:
+1. Extract the text from the PDF
+2. Read the full paper
+3. Give you a short briefing about what it found
+4. Ask what you want it to emphasize
+5. Create wiki pages for the paper, its key concepts, models, and authors
+6. Update the index and log
 
-```yaml
----
-title: "Full paper title"
-authors: [Ada Lovelace]
-year: 2024
-venue: "NeurIPS / arXiv / JCTC / etc."
-doi: "10.xxxx/xxxxx"        # optional
-arxiv: "2401.12345"         # optional
-tags: ["concept-a", "concept-b"]
-status: "read"              # read | skimming | pending
-relevance: high             # high | medium | low
----
-
-# Concept page schema
----
-title: "Concept Name"
-tags: ["math", "theory", "implementation"]
-related_papers: ["paper_id_1", "paper_id_2"]
-status: "mature"            # stub | developing | mature
----
-
-# Model page schema
----
-title: "Model Name"
-authors: ["author_id_1"]
-year: 2023
-paper: "paper_id"
-tags: ["architecture-type", "domain"]
----
-
-# Author page schema
----
-name: "Full Name"
-affiliation: "Institution"
-website: ""                 # optional
-papers: ["paper_id_1"]
----
-```
-
-Use a list for multiple authors too: `authors: [Ada Lovelace, Alan Turing]`. Do not use
-`Lovelace, Ada`, author IDs, or an unwrapped string such as `authors: Ada Lovelace`.
-
-Adapt these to your domain. Add fields that matter to your research questions.
-
----
-
-## The Four Operations
-
-### 1. Ingest — Adding a Source
-
-**Trigger:** "Ingest [filename]" or "Process [filename]"
-
-The ingest skill handles the full pipeline:
-- Extracts text from PDFs automatically
-- Reads the source in full before talking to you
-- Presents a briefing and asks what to emphasize
-- Creates/updates pages in papers/, concepts/, models/, authors/
-- Updates the index, overview, and log
-
-**One source at a time.** Dump-ingestion (processing many papers at once without conversation) is an antipattern. It produces shallow, disconnected pages. The conversation between ingest steps is where you add your own thinking.
-
-**What to say during the discussion step:**
+**During the discussion step, you can say things like:**
 - "This paper is important because it contradicts what I thought about X"
-- "Focus on the mathematical formulation, not the benchmarks"
-- "This is the baseline I'm trying to beat — note its limitations carefully"
+- "Focus on the math, not the experiments"
+- "This is the baseline I'm trying to beat — note its limitations"
 - "Just go ahead" (if you have no strong preferences)
 
-### 2. Query — Asking a Research Question
-
-**Trigger:** Any research question
-
-The query skill reads the index, identifies relevant pages, and synthesizes an answer with dense cross-references. Use it to:
-- Understand a concept ("Explain equivariance and why it matters for potentials")
-- Compare approaches ("What are the tradeoffs between NequIP and MACE?")
-- Trace an idea ("How has the treatment of many-body interactions evolved?")
-- Stress-test your thesis ("What does the wiki say against my current argument?")
-
-The AI will flag gaps — places where the wiki doesn't have an answer. This tells you what to ingest next.
-
-### 3. Lint — Health-Checking the Wiki
-
-**Trigger:** "Lint the wiki" or "Health-check the wiki"
-
-Run a lint pass every 10–15 ingests, or before a major writing session. The lint skill checks
-objective errors such as:
-- **Broken links** — `[[references]]` pointing to pages that don't exist
-- **Invalid required front matter** — missing fields or values that do not follow the schema
-- **Invalid author metadata** — a paper's authors are not a non-empty list of full names
-- **Index mismatches** — the index points to a page that does not exist
-
-If no objective errors are found, the report says **Validation passed**. Optional ideas, such as
-possible new sources or extra links, are clearly labeled as suggestions and are never treated as
-failures. Concepts mentioned in prose, page connectivity, and research gaps are not errors unless
-the schema explicitly requires them.
-
-### 4. Review — Producing a Literature Review
-
-**Trigger:** "Write a review of [topic]" or "Summarize the literature on [topic]"
-
-The review skill synthesizes everything the wiki knows about a topic into a coherent narrative. You can specify:
-- Scope (broad field vs. narrow subtopic)
-- Audience (thesis committee, conference reviewers, yourself)
-- Length
-- Whether to include work not yet in the wiki (via web search)
-
-Reviews can be saved back to `wiki/reviews/` and are updated as you ingest more papers.
+✅ **Done when:** The AI says the ingest is complete and you can see new files in `wiki/papers/`, `wiki/concepts/`, etc.
 
 ---
 
-## Page ID Conventions
+## Step 7 — Explore What Was Created
 
-Consistent IDs make the wiki navigable. Adapt these to your field:
+Open the `wiki/` folder and look around. You should see:
 
-| Type | Format | Example |
-|------|--------|---------|
-| Paper | `<lastname>_<keyword>_<year>` | `batatia_mace_2022` |
-| Concept | `<concept_name>` | `equivariance`, `attention_mechanism` |
-| Model/Method | `<name>` | `transformer`, `schnet`, `alphafold` |
-| Author | `<lastname>_<firstname>` | `vaswani_ashish` |
-| Review | `<topic>_review` | `mlip_review`, `protein_folding_review` |
+- A new file in `wiki/papers/` with the paper's title
+- Possibly new files in `wiki/concepts/` and `wiki/models/`
+- An entry in `wiki/index.md` listing the paper
+- A new entry at the bottom of `wiki/log.md`
 
-Use `snake_case` throughout.
+You can open any of these files in a text editor to read them. If you use [Obsidian](https://obsidian.md) (free), you can open the `wiki/` folder as a vault to see the `[[links]]` between pages as a graph.
 
----
-
-## Cross-Reference Conventions
-
-The wiki uses `[[wiki-link]]` syntax (compatible with Obsidian, Foam, and similar tools). Every page should link to related pages. The richer the link graph, the more useful the wiki.
-
-Rules:
-- Every paper page should link to the concepts it introduces or uses
-- Every concept page should link to the papers that define or use it
-- Every model page should link to its paper and the concepts it implements
-- Never leave a page as a dead end — always link outward
+✅ **Done when:** You've looked at at least one wiki page and seen the structured content the AI created.
 
 ---
 
-## Workflow Rhythm
+## You're Done! 🎉
 
-A sustainable rhythm for active research:
+Your wiki is running. Here's what to do next:
 
-| Frequency | Action |
-|-----------|--------|
-| After reading a paper | Ingest it. Have the conversation. |
-| When stuck or confused | Query the wiki. |
-| Every 2–3 weeks | Lint pass. |
-| Before writing a chapter/section | Run a review on the relevant topic. |
-| When starting a new research angle | Update `wiki/overview.md` manually, then query to see what the wiki already knows. |
+### Keep growing it
+After each paper you read, drop the PDF in `raw/papers/` and say "Ingest [filename]". The wiki gets richer with every paper.
 
----
+### Ask it questions
+At any point, ask your AI assistant a research question like:
+- "What does the wiki say about attention mechanisms?"
+- "Compare the two models we've ingested so far"
+- "What are the gaps in my coverage of topic X?"
 
-## Tips for Better Ingestion
+### Run a health check
+After every 10–15 papers, say: **"Lint the wiki"** — the AI will check demonstrable errors such as broken links and invalid required metadata. If validation passes, it will say so; optional suggestions are reported separately.
 
-**Do say during the discussion step:**
-- What this paper means for your thesis
-- Which claims you're skeptical of
-- What it contradicts or confirms from prior ingests
-- Which concepts are most important to formalize
-
-**Don't:**
-- Ingest the same paper twice (check the log)
-- Ingest papers you haven't read at all — shallow ingestion produces shallow pages
-- Let the wiki go more than 20 papers without a lint pass
+### Write a literature review
+When you're ready to write, say: **"Write a review of [topic]"** — the AI synthesizes everything the wiki knows into a structured narrative.
 
 ---
 
-## For Teams
+## Quick Reference Card
 
-If multiple researchers share a wiki:
-
-1. **One AI session per ingest** — don't have two people ingesting simultaneously
-2. **Use git** — commit after every ingest session. The log makes commit messages easy: `git log wiki/log.md | tail -1`
-3. **Shared overview.md** — have a weekly check-in to update the thesis and frontier questions together
-4. **Author pages** — expand author pages to include "who in our team focuses on this author's work"
-
----
-
-## Adapting the Schema to Your Field
-
-The defaults work for any empirical research field. Adjust based on your domain:
-
-**Experimental sciences:** Add `dataset`, `experimental_conditions`, `replication_status` fields to paper pages.
-
-**Computer science / ML:** Add `code_available`, `benchmark`, `compute_requirements`.
-
-**Social sciences / humanities:** Add `methodology`, `primary_sources`, `theoretical_framework`.
-
-**Clinical / medical:** Add `study_type`, `n_participants`, `outcome_measures`, `evidence_level`.
+| What you want to do | What to say |
+|---|---|
+| Add a paper | `"Ingest raw/papers/filename.pdf"` |
+| Ask a research question | Just ask it naturally |
+| Check wiki health | `"Lint the wiki"` |
+| Write a literature review | `"Write a review of [topic]"` |
+| See everything in the wiki | Open `wiki/index.md` |
+| See what the AI has done | Open `wiki/log.md` |
 
 ---
 
-## Anti-Patterns to Avoid
+## Troubleshooting
 
-| Anti-pattern | Why it's harmful | Fix |
-|---|---|---|
-| Bulk ingestion without conversation | Produces shallow, disconnected pages | One source at a time, always discuss first |
-| Never running lint | Broken links accumulate silently | Lint every 10–15 ingests |
-| Ignoring the overview | The wiki loses its thesis thread | Update overview after every 5 ingests |
-| Writing to `raw/` | Corrupts your original sources | Never. The boundary is sacred. |
-| Trusting the wiki blindly | The AI can make mistakes | Cross-check surprising claims against the original source |
-| Not using the query skill | Missing the compounding benefit | Ask the wiki questions regularly, not just at writing time |
+**"The AI didn't install the tools / says Python is missing"**
+Make sure your AI assistant has permission to run terminal commands. If it can't install automatically, follow its instructions to install Python from https://python.org/downloads, then restart and try again.
 
----
+**"The AI didn't create the folders"**
+Make sure your AI assistant has permission to create files and folders on your computer.
 
-## Getting Started Today
+**"I can't find the files the AI created"**
+Check that you told the AI the correct path to your project folder. Try asking: "Where did you create the wiki files?"
 
-1. Create the directory structure
-2. Drop 3–5 of your most important papers in `raw/papers/`
-3. Ask the AI to initialize the wiki files with your thesis statement
-4. Ingest your first paper: "Ingest [filename]"
-5. After the conversation, look at what was created in `wiki/`
+**"A wiki page looks wrong or incomplete"**
+You can ask the AI to fix it: "Please update the page for [paper name] to include [missing information]."
 
-The wiki is only as good as what you put into it — and how much you talk to it. Start small, be consistent, and let it compound.
+**"I want to add folders for my field (e.g., `datasets/`)"**
+Say: "Add a `datasets/` folder to the wiki structure and update AGENTS.md to include it."
 
 ---
 
-*This protocol is designed to be field-agnostic. If you adapt the schema or conventions for your domain in ways that work well, consider sharing your `wiki/schema.md` with others in your field.*
+## Tips for Long-Term Success
+
+- **Ingest one paper at a time.** Rushing through many at once produces shallow, low-quality pages.
+- **Talk to the AI during ingestion.** Tell it what the paper means for your research. This is where your own thinking gets woven in.
+- **Run a lint pass every 2–3 weeks.** It catches problems before they pile up.
+- **Update `wiki/overview.md` as your thinking evolves.** The AI uses it as your compass.
+- **Don't obsess over perfect PDFs.** Messy scans, preprints, and imperfect formatting all work fine.
+
+---
+
+*This protocol works for any research field. Once you've adapted the schema to your domain and built up 20+ papers, you'll have a genuinely powerful intellectual artifact — a compounding graph of your field that grows smarter with every session.*
