@@ -77,17 +77,21 @@ Don't organize obsessively. Just put PDFs in `raw/papers/`. The wiki will do the
 
 ---
 
-## Schema Design
+## Schema Design and Front Matter
 
-The schema defines the YAML frontmatter for each page type. Frontmatter enables structured queries later ("show me all papers from 2023 that touch concept X").
+The schema defines the YAML **front matter** for each page type. Front matter is a YAML block at the
+top of a Markdown page, between two lines containing only `---`. It lets the agent search and check
+pages while keeping the main text easy for a person to read.
+
+For paper pages, `title`, `authors`, and `year` are required. `authors` must always be a non-empty
+list of full names written as `Given names Family name`. This works for one or many authors:
 
 Ask the AI to create `wiki/schema.md` with schemas for your field. A general starting point:
 
 ```yaml
-# Paper page schema
 ---
 title: "Full paper title"
-authors: ["Last, First", "Last, First"]
+authors: [Ada Lovelace]
 year: 2024
 venue: "NeurIPS / arXiv / JCTC / etc."
 doi: "10.xxxx/xxxxx"        # optional
@@ -122,6 +126,9 @@ website: ""                 # optional
 papers: ["paper_id_1"]
 ---
 ```
+
+Use a list for multiple authors too: `authors: [Ada Lovelace, Alan Turing]`. Do not use
+`Lovelace, Ada`, author IDs, or an unwrapped string such as `authors: Ada Lovelace`.
 
 Adapt these to your domain. Add fields that matter to your research questions.
 
@@ -164,14 +171,17 @@ The AI will flag gaps — places where the wiki doesn't have an answer. This tel
 
 **Trigger:** "Lint the wiki" or "Health-check the wiki"
 
-Run a lint pass every 10–15 ingests, or before a major writing session. The lint skill finds:
+Run a lint pass every 10–15 ingests, or before a major writing session. The lint skill checks
+objective errors such as:
 - **Broken links** — `[[references]]` pointing to pages that don't exist
-- **Orphan pages** — pages no other page links to
-- **Missing concept pages** — concepts mentioned in prose but never formalized
-- **Stale claims** — old claims contradicted by newer ingests
-- **Data gaps** — open questions the wiki doesn't address
+- **Invalid required front matter** — missing fields or values that do not follow the schema
+- **Invalid author metadata** — a paper's authors are not a non-empty list of full names
+- **Index mismatches** — the index points to a page that does not exist
 
-The lint report also suggests 3–5 new sources to look for. This is useful when you're not sure what to read next.
+If no objective errors are found, the report says **Validation passed**. Optional ideas, such as
+possible new sources or extra links, are clearly labeled as suggestions and are never treated as
+failures. Concepts mentioned in prose, page connectivity, and research gaps are not errors unless
+the schema explicitly requires them.
 
 ### 4. Review — Producing a Literature Review
 
