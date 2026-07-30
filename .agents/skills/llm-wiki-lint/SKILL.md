@@ -1,120 +1,55 @@
 ---
 name: llm-wiki-lint
 description: >
-  Perform a full health-check of a research wiki: detect orphan pages, broken links, stale claims,
-  missing concept pages, and data gaps. Suggest new sources to fill identified gaps.
-  Use when the user says "lint the wiki", "health-check", "audit the wiki", "what's missing",
-  "check my wiki", or asks for a wiki quality report. Always read this skill before starting a lint pass.
+  Check a research wiki for verifiable structural and metadata errors. Report a clear pass when
+  no objective errors are found, and keep optional improvements separate from errors.
+  Use for "lint the wiki", "health-check", "audit the wiki", or "check my wiki".
 ---
 
 # LLM Wiki — Lint Skill
 
-A lint pass audits the entire wiki for structural and semantic issues. It is non-destructive by default — it reports and proposes fixes, then applies only what the user approves.
+Use this skill to check whether the wiki is internally consistent. A lint pass is a validation
+step, not a search for criticism. Report only problems that can be demonstrated from files in
+the wiki or from the documented schema.
 
----
+## What to do
 
-## Step 1 — Read Everything
+1. Read the wiki map (`wiki/index.md`), schema (`wiki/schema.md`), overview, log, and every page.
+2. Record the page IDs that exist and every `[[page_id]]` link that appears.
+3. Check only these objective conditions:
+   - a wiki link points to a page that does not exist;
+   - a page has malformed or missing required front matter;
+   - a paper's `authors` field violates the documented author format;
+   - a paper and an author page explicitly refer to each other by an ID that does not exist;
+   - the index lists a page that does not exist, or omits a page when the schema requires indexing.
+4. If the wiki has no pages of a type, say that the check was not applicable. Do not call an empty
+   wiki broken.
+5. Report results with two separate sections:
+   - **Errors:** concrete, reproducible problems. Include the file and the exact field or link.
+   - **Optional suggestions:** ideas such as adding more cross-links or sources. Include this
+     section only when there is a clear reason, and never present it as a failure.
 
-Read all files in `wiki/`:
-- `wiki/index.md`
-- `wiki/overview.md`
-- `wiki/schema.md`
-- All files in `wiki/papers/`
-- All files in `wiki/concepts/`
-- All files in `wiki/models/`
-- All files in `wiki/authors/`
-- `wiki/log.md`
+## Important limits
 
-Build an internal map:
-- **All page IDs** that exist as files
-- **All `[[links]]`** found anywhere in the wiki, and which pages they point to
-- **All concept names** mentioned in body text (not just as links)
-- **All paper IDs** cited inline
+- Do not infer that a prose concept needs its own page. Mentioning a concept is not an error.
+- Do not label a page an orphan unless the project schema explicitly requires inbound links.
+- Do not call a claim stale or contradicted without two identifiable claims and evidence that one
+  is newer. If that evidence is unavailable, do not report it.
+- Do not invent missing pages, sources, authors, or fixes.
+- Do not modify files during the check. Ask before applying a correction.
 
----
+## Result format
 
-## Step 2 — Run Checks
+If errors exist, list them by severity only when the schema defines severity. Otherwise use a plain
+numbered list. If there are no errors, begin with:
 
-### 2a. Orphan Pages
-Pages that exist as files but have **zero inbound `[[links]]`** from any other page.
-These are isolated nodes — they contribute nothing to the knowledge graph.
+> **Validation passed.** No objective errors were found in the checked wiki.
 
-### 2b. Broken Links
-`[[links]]` that point to page IDs that **do not exist** as files.
-These are dangling references.
+Then state what was checked and any optional suggestions separately. Do not suggest sources merely
+to make the report longer.
 
-### 2c. Missing Concept Pages
-Concept names mentioned in body text (not as `[[links]]`) that **lack their own page**.
-These are implicit concepts that deserve formalization.
+## Local validation helper
 
-### 2d. Stale Claims
-Claims in one page that are **contradicted by a more recently ingested paper**.
-Use `wiki/log.md` to determine ingestion order (most recent date = most authoritative).
-Flag, do not auto-correct.
-
-### 2e. Schema Violations
-Pages missing required YAML frontmatter fields (consult `wiki/schema.md`).
-
-### 2f. Author–Paper Mismatches
-Papers listed in `wiki/papers/` whose authors don't have corresponding pages in `wiki/authors/`, and vice versa (author pages citing papers that don't exist in the wiki).
-
-### 2g. Overview–Wiki Divergence
-Claims in `wiki/overview.md` that are not supported by any `[[paper_id]]` link, or frontier questions that have been answered by ingested papers but not updated in the overview.
-
-### 2h. Data Gaps
-Important open questions mentioned in papers or the overview that have **no corresponding concept or paper pages** attempting to address them.
-
----
-
-## Step 3 — Report
-
-Present the findings as a structured report. Group by severity:
-
-**🔴 Critical** (broken links, missing required frontmatter)
-**🟡 Structural** (orphans, author mismatches, schema violations)
-**🟠 Semantic** (stale claims, overview divergence)
-**🔵 Gaps** (missing concept pages, unanswered frontier questions)
-
-For each issue, name the specific page(s) involved and describe the problem clearly.
-
-Example format:
-```
-🔴 Broken link: [[nequip_symmetry_2022]] referenced in `concepts/equivariance.md` but no such paper page exists.
-🟡 Orphan: `authors/schutt_kristof.md` has no inbound links.
-🟠 Stale claim: `concepts/body_order.md` states "ACE is state-of-the-art" — contradicted by [[batatia_mace_2022]] (ingested later).
-🔵 Missing page: "Clebsch-Gordan decomposition" mentioned 4× in papers but has no concept page.
-```
-
----
-
-## Step 4 — Suggest New Sources
-
-Based on identified gaps, suggest **3–5 sources** to look for. Be specific:
-
-- Paper title + author + approximate year (if known)
-- DOI or arXiv ID (if you have it)
-- Why it would fill the identified gap
-
----
-
-## Step 5 — Apply Approved Fixes
-
-Ask the user: "Which issues should I fix now?"
-
-Only apply fixes the user explicitly approves. Safe fixes (that don't change semantics):
-- Create stub pages for broken links (with a `stub: true` frontmatter flag)
-- Add `[[wiki-link]]` syntax around concept names that were mentioned without links
-- Fix frontmatter fields that are clearly missing
-
-Do not auto-correct stale claims — flag them and let the user decide.
-
----
-
-## Step 6 — Append to Log
-
-```
-## [YYYY-MM-DD] lint | Lint pass
-- Issues found: N (X critical, Y structural, Z semantic, W gaps)
-- Issues fixed: N
-- Summary: [2–3 sentence summary of wiki health]
-```
+When this repository is being checked, run `scripts/wiki_validation.py` if `wiki/` exists. It
+validates the canonical author format used by the schema. It is a supporting check, not a reason to
+report speculative issues.

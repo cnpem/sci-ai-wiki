@@ -34,7 +34,7 @@ my-research-wiki/
     └── reviews/
 ```
 
-**The golden rule:** You add things to `raw/`. The AI writes to `wiki/`. 
+**The golden rule:** You add things to `raw/`. The AI writes to `wiki/`.
 
 ---
 
@@ -48,7 +48,7 @@ You need:
 To download Antigravity:
 https://antigravity.google/
 
-You have already received the antigravity link for downloading. When done, open it. It will work just as VSCode or any other VSCode-like code editor. You will see a chat window and a file browser. Open the folder you want your SciAIWiki to be set up in. The folder will open and you should drag or upload the prompt.md and .agents folder there (Just put the .zip folder in there or the contents of it after unzipping it).
+When done, open Antigravity. It works like VSCode or another VSCode-like code editor: you will see a chat window and a file browser. Open the folder where you want your SciAI Wiki to live, then copy the `.agents` folder and `graph.html` into that project folder.
 
 You should see the .agents folder, and the graph.html file in the left file browser and the chat window on the right. Now you can follow to the next step.
 ---
@@ -132,6 +132,8 @@ Here's what gets created and what each file does:
 | `wiki/index.md` | A master list of all wiki pages (starts empty) |
 | `wiki/log.md` | A history of everything the AI has done |
 
+> **Front matter reminder:** Wiki pages begin with a YAML block between two lines containing only `---`. Paper pages require `title`, `authors`, and `year`. Use a non-empty list of full names such as `authors: [Ada Lovelace, Alan Turing]`; do not use `Last, First`, author IDs, or a single unwrapped author string. Author pages use the same full-name format in their `name` field. See `README.md` for more examples.
+
 ✅ **Done when:** The AI says all files have been created and shows you the verification output.
 
 ---
@@ -204,7 +206,7 @@ At any point, ask your AI assistant a research question like:
 - "What are the gaps in my coverage of topic X?"
 
 ### Run a health check
-After every 10–15 papers, say: **"Lint the wiki"** — the AI will check for broken links, missing pages, and gaps, and suggest what to read next.
+After every 10–15 papers, say: **"Lint the wiki"** — the AI will check demonstrable errors such as broken links and invalid required metadata. If validation passes, it will say so; optional suggestions are reported separately.
 
 ### Write a literature review
 When you're ready to write, say: **"Write a review of [topic]"** — the AI synthesizes everything the wiki knows into a structured narrative.
