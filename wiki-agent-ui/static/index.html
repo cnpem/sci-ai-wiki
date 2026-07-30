@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="description"
+      content="Converse com sua wiki de pesquisa usando um agente à sua escolha."
+    />
+    <title>Wiki Research Chat</title>
+    <link rel="icon" href="/static/favicon.svg" type="image/svg+xml" />
+    <link
+      rel="stylesheet"
+      href="/static/vendor/katex/katex.min.css"
+    />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
+  <body>
+    <div id="workspace-shell" class="workspace-shell">
+      <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">W</span>
+          <div>
+            <h1>Wiki Research Chat</h1>
+            <p id="status" class="status">Conectando…</p>
+          </div>
+          <span class="read-only-badge">Somente leitura</span>
+        </div>
+        <div class="topbar-actions">
+          <label class="engine-picker" for="engine">
+            <span>Motor</span>
+            <select id="engine" name="engine" aria-label="Motor de pesquisa">
+              <option value="antigravity">Antigravity</option>
+              <option value="opencode">OpenCode · Gemma 4 31B</option>
+              <option value="codex">Codex</option>
+            </select>
+          </label>
+          <button id="new-chat" class="secondary-button" type="button">
+            Nova conversa
+          </button>
+        </div>
+      </header>
+
+      <section
+        id="messages"
+        class="messages"
+        aria-live="polite"
+        aria-label="Conversa"
+      >
+        <div id="empty-state" class="empty-state">
+          <span class="spark" aria-hidden="true">✦</span>
+          <h2>O que você quer investigar?</h2>
+          <p>
+            Escolha o motor. O agente pesquisa e abre somente os arquivos
+            necessários da wiki; você recebe a síntese e as páginas citadas.
+          </p>
+          <div class="suggestions">
+            <button type="button" class="suggestion">
+              Compare MACE e NequIP
+            </button>
+            <button type="button" class="suggestion">
+              Como o produto geométrico substitui Clebsch–Gordan?
+            </button>
+            <button type="button" class="suggestion">
+              O que a wiki diz sobre redes hipercomplexas?
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <footer class="composer-wrap">
+        <div
+          id="attachment-tray"
+          class="attachment-tray"
+          aria-label="PDFs anexados"
+          hidden
+        ></div>
+        <form id="chat-form" class="composer">
+          <button
+            id="attach-pdf"
+            class="attach-button"
+            type="button"
+            aria-label="Anexar PDF"
+            title="Anexar PDF temporariamente"
+          >
+            <span aria-hidden="true">+</span>
+          </button>
+          <input
+            id="pdf-input"
+            type="file"
+            accept="application/pdf,.pdf"
+            multiple
+            hidden
+          />
+          <label class="sr-only" for="message">Pergunta</label>
+          <textarea
+            id="message"
+            name="message"
+            rows="1"
+            maxlength="20000"
+            placeholder="Pergunte à sua wiki…"
+            autocomplete="off"
+            required
+          ></textarea>
+          <button id="send" class="send-button" type="submit" aria-label="Enviar">
+            <span aria-hidden="true">↑</span>
+          </button>
+        </form>
+        <p
+          id="attachment-status"
+          class="attachment-status"
+          role="status"
+          aria-live="polite"
+        ></p>
+        <p class="hint">Enter envia · Shift + Enter quebra a linha</p>
+      </footer>
+      </main>
+
+      <div
+        id="viewer-resizer"
+        class="viewer-resizer"
+        role="separator"
+        aria-label="Redimensionar página da wiki"
+        aria-orientation="vertical"
+        aria-valuemin="320"
+        aria-valuenow="470"
+        tabindex="0"
+        hidden
+      ></div>
+
+      <aside id="wiki-viewer" class="wiki-viewer" hidden>
+        <header class="viewer-header">
+          <div>
+            <p class="viewer-eyebrow">Página da wiki</p>
+            <h2 id="viewer-title">Referência</h2>
+          </div>
+          <button
+            id="close-viewer"
+            class="viewer-close"
+            type="button"
+            aria-label="Fechar página"
+          >
+            ×
+          </button>
+        </header>
+        <article id="viewer-content" class="viewer-content markdown-body"></article>
+      </aside>
+    </div>
+
+    <script
+      defer
+      src="/static/vendor/katex/katex.min.js"
+    ></script>
+    <script src="/static/app.js" defer></script>
+  </body>
+</html>

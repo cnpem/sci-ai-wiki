@@ -1,0 +1,19 @@
+.venv/
+__pycache__/
+.pytest_cache/
+.env
+*.pyc
+.DS_Store
+node_modules/
+dist/
+.vinext/
+.wrangler/
+
+# Keep only the compact KaTeX browser runtime and modern webfonts.
+static/vendor/katex/*
+!static/vendor/katex/LICENSE
+!static/vendor/katex/katex.min.css
+!static/vendor/katex/katex.min.js
+!static/vendor/katex/fonts/
+static/vendor/katex/fonts/*
+!static/vendor/katex/fonts/*.woff2
