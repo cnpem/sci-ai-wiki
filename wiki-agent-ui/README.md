@@ -15,23 +15,93 @@ pip install -r requirements.txt
 cp .env.example .env
 ```
 
-Edite `WIKI_PATH` no `.env`, autentique pelo menos um motor conforme as seções
-abaixo e execute:
+Edite `WIKI_PATH` no `.env` e execute:
 
 ```bash
 python app.py
 ```
 
-Acesse <http://127.0.0.1:8000>. Para confirmar a instalação, rode
-`pytest -q`.
+Acesse <http://127.0.0.1:8000>. Se escolher Antigravity, o próprio site guia
+o login oficial. Para confirmar a instalação, rode `pytest -q`.
 
 ## Fase 1 — instalar
 
 Requisitos básicos: Python 3.11 ou mais recente e pelo menos um dos motores:
 
-- Antigravity CLI instalado, com uma sessão do `agy` autenticada; ou
+- Antigravity CLI instalado; o login pode ser feito pelo site; ou
 - OpenCode e Ollama instalados, com o modelo configurado já disponível; ou
 - Codex CLI instalado e autenticado com `codex login`.
+
+### Instalar Antigravity CLI
+
+macOS ou Linux:
+
+```bash
+curl -fsSL https://antigravity.google/cli/install.sh | bash
+agy --version
+```
+
+Windows PowerShell:
+
+```powershell
+irm https://antigravity.google/cli/install.ps1 | iex
+agy --version
+```
+
+O instalador oficial coloca o executável em `~/.local/bin/agy` no macOS/Linux
+e na pasta local do usuário no Windows. Se `agy` ainda não for encontrado,
+feche e reabra o terminal. Consulte a [instalação oficial do Antigravity
+CLI](https://antigravity.google/docs/cli-install).
+
+Não é preciso executar um comando de login separado: no primeiro `agy`, o
+Antigravity abre o navegador e pede a conta Google. Neste projeto, o botão
+**Conectar com Google** inicia exatamente esse fluxo.
+
+### Instalar e autenticar Codex CLI
+
+Instalador recomendado no macOS ou Linux:
+
+```bash
+curl -fsSL https://chatgpt.com/codex/install.sh | sh
+codex --version
+```
+
+Alternativa com Node.js/npm, inclusive no Windows:
+
+```bash
+npm install -g @openai/codex
+codex --version
+```
+
+Para usar a assinatura/conta ChatGPT do próprio usuário:
+
+```bash
+codex login
+codex login status
+```
+
+`codex login` abre o navegador. Escolha **Sign in with ChatGPT**, conclua o
+login e volte ao terminal. Para sair, use `codex logout`. Veja o
+[quickstart oficial do Codex CLI](https://developers.openai.com/codex/cli/) e
+as [opções oficiais de autenticação](https://developers.openai.com/codex/auth/).
+
+Também é possível usar uma chave da OpenAI Platform, com cobrança separada da
+assinatura ChatGPT:
+
+```bash
+export OPENAI_API_KEY="sua-chave"
+printenv OPENAI_API_KEY | codex login --with-api-key
+```
+
+No Windows PowerShell:
+
+```powershell
+$env:OPENAI_API_KEY = "sua-chave"
+$env:OPENAI_API_KEY | codex login --with-api-key
+```
+
+Não coloque a chave no `.env` deste projeto e não a compartilhe. O app usa a
+sessão que o Codex CLI salvou localmente.
 
 ### macOS ou Linux
 
@@ -67,17 +137,6 @@ CODEX_TIMEOUT_SECONDS=600
 
 `CODEX_MODEL` vazio usa o modelo padrão disponível para a conta do usuário.
 
-O modo headless precisa de permissão de leitura para essa pasta em
-`~/.gemini/antigravity-cli/settings.json`:
-
-```json
-{
-  "permissions": {
-    "allow": ["read_file(/caminho/para/a/pasta/graph)"]
-  }
-}
-```
-
 Critério de sucesso: `WIKI_PATH` contém `GEMINI.md`, `.agents/skills/` e
 `wiki/`; `GET /api/health` informa `"ready": true`.
 
@@ -89,7 +148,26 @@ python app.py
 
 Abra <http://127.0.0.1:8000>.
 
-Critério de sucesso: a página mostra o total de páginas e aceita uma pergunta.
+### Primeiro acesso com Antigravity
+
+1. Selecione **Antigravity** e clique em **Conectar**.
+2. Clique em **Conectar com Google**. O site abre o `agy` oficial uma única vez
+   no terminal do sistema; o próprio `agy` abre o login do Google no navegador.
+3. Escolha a conta, conclua as telas oficiais do Antigravity e volte ao site.
+4. Clique em **Já concluí o login**.
+
+O site acrescenta apenas a pasta definida em `WIKI_PATH` às pastas confiáveis e
+a permissão `read_file(WIKI_PATH)` às configurações do Antigravity. As demais
+configurações são preservadas. Se o sistema não permitir abrir o terminal, o
+modal mostra um único comando com botão **Copiar**.
+
+O OAuth é inteiramente controlado pelo `agy`: a sessão fica no gerenciador de
+credenciais do sistema e o site nunca recebe senha, cookie ou token. O fluxo
+segue a [autenticação oficial do Antigravity
+CLI](https://antigravity.google/docs/cli/install).
+
+Critério de sucesso: a página mostra o total de páginas, o status
+`páginas · Antigravity` e aceita uma pergunta.
 
 ## Fase 3 — verificar
 
@@ -97,8 +175,9 @@ Critério de sucesso: a página mostra o total de páginas e aceita uma pergunta
 pytest -q
 ```
 
-Os testes cobrem indexação local, bloqueio de caminhos, estado do agente,
-anexos PDF e conversas simuladas. Eles não gastam cota do Antigravity.
+Os testes cobrem indexação local, bloqueio de caminhos, onboarding do
+Antigravity, preservação das configurações, anexos PDF e conversas simuladas.
+Eles não abrem o terminal e não gastam cota do Antigravity.
 
 ## Como funciona
 
@@ -155,11 +234,12 @@ arquivos Markdown.
 
 ## Usar em outro PC
 
-1. Copie `wiki-agent-ui` e a pasta da wiki, sem copiar o arquivo `.env`.
+1. Clone a branch `dev` e disponibilize a pasta da wiki, sem copiar o arquivo
+   `.env`.
 2. Instale Python e pelo menos um dos três motores.
 3. Crie o `.env` local e configure `WIKI_PATH`.
 4. O colega autentica o motor com a própria conta:
-   - Antigravity: execute `agy` e conclua o login.
+   - Antigravity: abra o site e use **Conectar com Google**.
    - Codex com assinatura ChatGPT: execute `codex login`.
    - Codex com API: `printenv OPENAI_API_KEY | codex login --with-api-key`.
    - OpenCode + Ollama: não exige conta externa; o modelo roda localmente.
@@ -167,6 +247,10 @@ arquivos Markdown.
 
 Nunca copie `~/.codex/auth.json`, chaves de API ou arquivos de login. Cada
 usuário deve criar a própria sessão local.
+
+O botão de login do Antigravity só funciona quando a página é aberta no próprio
+computador em `127.0.0.1`. Esse limite impede que alguém na rede faça o servidor
+abrir programas na máquina hospedeira.
 
 Para acesso por outros dispositivos da mesma rede, rode:
 

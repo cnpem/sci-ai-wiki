@@ -4,8 +4,10 @@ import asyncio
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 import uuid
 from dataclasses import dataclass
@@ -13,7 +15,15 @@ from pathlib import Path
 from typing import AsyncIterator, Literal
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, File, Form, HTTPException, Query, UploadFile
+from fastapi import (
+    FastAPI,
+    File,
+    Form,
+    HTTPException,
+    Query,
+    Request,
+    UploadFile,
+)
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -46,6 +56,9 @@ class Settings:
     codex_bin: str = "codex"
     codex_model: str = ""
     codex_timeout_seconds: int = 600
+    agy_settings_path: Path = (
+        Path.home() / ".gemini" / "antigravity-cli" / "settings.json"
+    )
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -85,6 +98,17 @@ class Settings:
                     1_200,
                 ),
             ),
+            agy_settings_path=Path(
+                os.getenv(
+                    "AGY_SETTINGS_PATH",
+                    str(
+                        Path.home()
+                        / ".gemini"
+                        / "antigravity-cli"
+                        / "settings.json"
+                    ),
+                )
+            ).expanduser(),
         )
 
 
@@ -395,6 +419,189 @@ def codex_authenticated(executable: str) -> bool:
     except (OSError, subprocess.TimeoutExpired):
         return False
     return completed.returncode == 0
+
+
+LOCAL_SETUP_CLIENTS = {"127.0.0.1", "::1", "localhost", "testclient"}
+
+
+def antigravity_read_rule(workspace: Path) -> str:
+    return f"read_file({workspace.resolve()})"
+
+
+def antigravity_login_command(executable: str, workspace: Path) -> str:
+    return (
+        f"cd {shlex.quote(str(workspace.resolve()))} && "
+        f"{shlex.quote(executable)}"
+    )
+
+
+def antigravity_setup_state(
+    settings_path: Path,
+    workspace: Path,
+) -> dict:
+    data: dict = {}
+    settings_error = ""
+    if settings_path.is_file():
+        try:
+            loaded = json.loads(settings_path.read_text(encoding="utf-8"))
+            if not isinstance(loaded, dict):
+                raise ValueError("o conteúdo precisa ser um objeto JSON")
+            data = loaded
+        except (OSError, json.JSONDecodeError, ValueError) as error:
+            settings_error = f"Não foi possível ler as configurações: {error}"
+
+    workspace_root = workspace.resolve()
+    trusted = data.get("trustedWorkspaces", [])
+    trusted_paths: set[Path] = set()
+    if isinstance(trusted, list):
+        for item in trusted:
+            if not isinstance(item, str):
+                continue
+            try:
+                trusted_paths.add(Path(item).expanduser().resolve())
+            except OSError:
+                continue
+
+    permissions = data.get("permissions", {})
+    allowed = permissions.get("allow", []) if isinstance(permissions, dict) else []
+    has_read_rule = (
+        isinstance(allowed, list)
+        and antigravity_read_rule(workspace_root) in allowed
+    )
+    return {
+        "configured": workspace_root in trusted_paths and has_read_rule,
+        "workspaceTrusted": workspace_root in trusted_paths,
+        "readOnlyAccess": has_read_rule,
+        "settingsError": settings_error or None,
+    }
+
+
+def prepare_antigravity_workspace(
+    settings_path: Path,
+    workspace: Path,
+) -> dict:
+    data: dict = {}
+    if settings_path.is_file():
+        try:
+            loaded = json.loads(settings_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as error:
+            raise ValueError(
+                f"O arquivo de configurações do Antigravity é inválido: {error}"
+            ) from error
+        if not isinstance(loaded, dict):
+            raise ValueError(
+                "O arquivo de configurações do Antigravity precisa conter "
+                "um objeto JSON."
+            )
+        data = loaded
+
+    workspace_root = str(workspace.resolve())
+    trusted = data.get("trustedWorkspaces")
+    if not isinstance(trusted, list):
+        trusted = []
+    if workspace_root not in trusted:
+        trusted.append(workspace_root)
+    data["trustedWorkspaces"] = trusted
+
+    permissions = data.get("permissions")
+    if not isinstance(permissions, dict):
+        permissions = {}
+    allowed = permissions.get("allow")
+    if not isinstance(allowed, list):
+        allowed = []
+    read_rule = antigravity_read_rule(workspace)
+    if read_rule not in allowed:
+        allowed.append(read_rule)
+    permissions["allow"] = allowed
+    data["permissions"] = permissions
+
+    settings_path.parent.mkdir(parents=True, exist_ok=True)
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=".settings-",
+        suffix=".json",
+        dir=settings_path.parent,
+    )
+    temporary_path = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            json.dump(data, handle, ensure_ascii=False, indent=2)
+            handle.write("\n")
+        os.replace(temporary_path, settings_path)
+    finally:
+        temporary_path.unlink(missing_ok=True)
+
+    return antigravity_setup_state(settings_path, workspace)
+
+
+def launch_antigravity_login(
+    executable: str,
+    workspace: Path,
+) -> bool:
+    command = antigravity_login_command(executable, workspace)
+    process_options = {
+        "stdout": subprocess.DEVNULL,
+        "stderr": subprocess.DEVNULL,
+        "start_new_session": True,
+    }
+    try:
+        if sys.platform == "darwin":
+            script = (
+                'tell application "Terminal" to do script '
+                f"{json.dumps(command)}"
+            )
+            subprocess.Popen(
+                [
+                    "/usr/bin/osascript",
+                    "-e",
+                    'tell application "Terminal" to activate',
+                    "-e",
+                    script,
+                ],
+                **process_options,
+            )
+            return True
+
+        if os.name == "nt":
+            subprocess.Popen(
+                [
+                    "cmd.exe",
+                    "/c",
+                    "start",
+                    "",
+                    "/D",
+                    str(workspace.resolve()),
+                    executable,
+                ],
+                **process_options,
+            )
+            return True
+
+        terminal_candidates = (
+            ("x-terminal-emulator", ["-e", executable]),
+            ("gnome-terminal", ["--", executable]),
+            ("konsole", ["-e", executable]),
+        )
+        for terminal, arguments in terminal_candidates:
+            terminal_path = shutil.which(terminal)
+            if terminal_path:
+                subprocess.Popen(
+                    [terminal_path, *arguments],
+                    cwd=workspace.resolve(),
+                    **process_options,
+                )
+                return True
+    except OSError:
+        return False
+    return False
+
+
+def require_local_setup_request(request: Request) -> None:
+    client_host = request.client.host if request.client else ""
+    if client_host not in LOCAL_SETUP_CLIENTS:
+        raise HTTPException(
+            status_code=403,
+            detail="O login do Antigravity só pode ser iniciado neste computador.",
+        )
 
 
 async def codex_stream_events(
@@ -784,6 +991,70 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def index() -> FileResponse:
         return FileResponse(BASE_DIR / "static" / "index.html")
 
+    @app.get("/api/setup/antigravity")
+    async def antigravity_setup(request: Request) -> dict:
+        require_local_setup_request(request)
+        executable = resolve_executable(config.agy_bin)
+        return {
+            "installed": bool(executable),
+            "command": antigravity_login_command(
+                executable or config.agy_bin,
+                config.wiki_path,
+            ),
+            "localOnly": True,
+            **antigravity_setup_state(
+                config.agy_settings_path,
+                config.wiki_path,
+            ),
+        }
+
+    @app.post("/api/setup/antigravity/start")
+    async def start_antigravity_setup(request: Request) -> dict:
+        require_local_setup_request(request)
+        executable = resolve_executable(config.agy_bin)
+        if not executable:
+            raise HTTPException(
+                status_code=503,
+                detail="Antigravity CLI (agy) não encontrado neste computador.",
+            )
+        launched = launch_antigravity_login(executable, config.wiki_path)
+        return {
+            "launched": launched,
+            "command": antigravity_login_command(
+                executable,
+                config.wiki_path,
+            ),
+            "message": (
+                "O Antigravity foi aberto. Conclua o login oficial do Google "
+                "e volte para esta página."
+                if launched
+                else "Não foi possível abrir o terminal automaticamente. "
+                "Execute o comando abaixo uma vez."
+            ),
+        }
+
+    @app.post("/api/setup/antigravity/complete")
+    async def complete_antigravity_setup(request: Request) -> dict:
+        require_local_setup_request(request)
+        if not config.wiki_path.is_dir():
+            raise HTTPException(
+                status_code=400,
+                detail="A pasta configurada em WIKI_PATH não existe.",
+            )
+        try:
+            state = prepare_antigravity_workspace(
+                config.agy_settings_path,
+                config.wiki_path,
+            )
+        except (OSError, ValueError) as error:
+            raise HTTPException(status_code=400, detail=str(error)) from error
+        return {
+            **state,
+            "message": (
+                "Antigravity conectado e wiki preparada em modo somente leitura."
+            ),
+        }
+
     def attachment_context_for_request(
         request: ChatRequest,
     ) -> tuple[str, list[dict]]:
@@ -859,6 +1130,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def health() -> dict:
         wiki: WikiIndex | None = app.state.wiki
         antigravity_executable = resolve_executable(config.agy_bin)
+        antigravity_state = antigravity_setup_state(
+            config.agy_settings_path,
+            config.wiki_path,
+        )
         opencode_executable = resolve_executable(config.opencode_bin)
         codex_executable = resolve_executable(config.codex_bin)
         codex_auth_ready = bool(
@@ -870,6 +1145,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 "label": "Antigravity",
                 "model": config.model or "Antigravity",
                 "ready": bool(antigravity_executable and wiki),
+                "setupRequired": not antigravity_state["configured"],
             },
             {
                 "id": "opencode",
@@ -888,6 +1164,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         return {
             "ready": any(engine["ready"] for engine in engines),
             "agentReady": bool(antigravity_executable),
+            "antigravityConfigured": antigravity_state["configured"],
             "opencodeReady": bool(opencode_executable),
             "codexReady": codex_auth_ready,
             "wikiReady": wiki is not None,

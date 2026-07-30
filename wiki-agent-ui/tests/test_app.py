@@ -46,6 +46,123 @@ def test_health_reports_antigravity_without_exposing_secrets(
         "opencode",
         "codex",
     }
+    antigravity = next(
+        engine
+        for engine in response.json()["engines"]
+        if engine["id"] == "antigravity"
+    )
+    assert antigravity["setupRequired"] is True
+    assert response.json()["antigravityConfigured"] is False
+
+
+def test_antigravity_setup_preserves_settings_and_is_idempotent(
+    tmp_path: Path,
+):
+    workspace = make_wiki(tmp_path)
+    settings_path = tmp_path / "antigravity" / "settings.json"
+    settings_path.parent.mkdir()
+    settings_path.write_text(
+        app_module.json.dumps(
+            {
+                "colorScheme": "dark",
+                "permissions": {"deny": ["write_file"]},
+                "trustedWorkspaces": ["/another/wiki"],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    first_state = app_module.prepare_antigravity_workspace(
+        settings_path,
+        workspace,
+    )
+    second_state = app_module.prepare_antigravity_workspace(
+        settings_path,
+        workspace,
+    )
+    saved = app_module.json.loads(settings_path.read_text(encoding="utf-8"))
+
+    assert first_state["configured"] is True
+    assert second_state["configured"] is True
+    assert saved["colorScheme"] == "dark"
+    assert saved["permissions"]["deny"] == ["write_file"]
+    assert saved["trustedWorkspaces"].count(str(workspace.resolve())) == 1
+    assert saved["permissions"]["allow"] == [
+        app_module.antigravity_read_rule(workspace)
+    ]
+
+
+def test_antigravity_setup_endpoints_launch_and_prepare_locally(
+    tmp_path: Path,
+    monkeypatch,
+):
+    workspace = make_wiki(tmp_path)
+    settings = Settings(
+        wiki_path=workspace,
+        agy_bin="agy-test",
+        timeout_seconds=60,
+        model="",
+        agy_settings_path=tmp_path / "agy-settings.json",
+    )
+    launched = {}
+    monkeypatch.setattr(
+        app_module,
+        "resolve_executable",
+        lambda _: "/bin/agy-test",
+    )
+
+    def fake_launch(executable, launch_workspace):
+        launched["executable"] = executable
+        launched["workspace"] = launch_workspace
+        return True
+
+    monkeypatch.setattr(app_module, "launch_antigravity_login", fake_launch)
+    client = TestClient(create_app(settings))
+
+    initial = client.get("/api/setup/antigravity")
+    started = client.post("/api/setup/antigravity/start")
+    completed = client.post("/api/setup/antigravity/complete")
+    health = client.get("/api/health")
+
+    assert initial.status_code == 200
+    assert initial.json()["installed"] is True
+    assert initial.json()["configured"] is False
+    assert str(workspace.resolve()) in initial.json()["command"]
+    assert started.status_code == 200
+    assert started.json()["launched"] is True
+    assert launched == {
+        "executable": "/bin/agy-test",
+        "workspace": workspace,
+    }
+    assert completed.status_code == 200
+    assert completed.json()["configured"] is True
+    assert health.json()["antigravityConfigured"] is True
+
+
+def test_antigravity_setup_mutations_reject_remote_clients(
+    tmp_path: Path,
+    monkeypatch,
+):
+    settings = Settings(
+        wiki_path=make_wiki(tmp_path),
+        agy_bin="agy-test",
+        timeout_seconds=60,
+        model="",
+        agy_settings_path=tmp_path / "agy-settings.json",
+    )
+    monkeypatch.setattr(
+        app_module,
+        "resolve_executable",
+        lambda _: "/bin/agy-test",
+    )
+    client = TestClient(
+        create_app(settings),
+        client=("198.51.100.9", 41234),
+    )
+
+    assert client.get("/api/setup/antigravity").status_code == 403
+    assert client.post("/api/setup/antigravity/start").status_code == 403
+    assert client.post("/api/setup/antigravity/complete").status_code == 403
 
 
 def test_chat_runs_antigravity_and_resolves_cited_sources(
@@ -285,6 +402,9 @@ def test_index_loads_katex_from_local_static_assets(tmp_path: Path):
     assert 'id="attach-pdf"' in response.text
     assert 'id="pdf-input"' in response.text
     assert 'id="attachment-tray"' in response.text
+    assert 'id="agy-setup"' in response.text
+    assert 'id="start-agy-login"' in response.text
+    assert 'id="complete-agy-login"' in response.text
     assert client.get("/static/vendor/katex/katex.min.js").status_code == 200
 
 

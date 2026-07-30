@@ -36,6 +36,14 @@
               <option value="codex">Codex</option>
             </select>
           </label>
+          <button
+            id="connect-engine"
+            class="connect-button"
+            type="button"
+            hidden
+          >
+            Conectar
+          </button>
           <button id="new-chat" class="secondary-button" type="button">
             Nova conversa
           </button>
@@ -146,6 +154,67 @@
         </header>
         <article id="viewer-content" class="viewer-content markdown-body"></article>
       </aside>
+    </div>
+
+    <div id="agy-setup" class="setup-overlay" hidden>
+      <section
+        class="setup-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="agy-setup-title"
+      >
+        <button
+          id="close-agy-setup"
+          class="setup-close"
+          type="button"
+          aria-label="Fechar"
+        >
+          ×
+        </button>
+        <p class="setup-eyebrow">Configuração inicial</p>
+        <h2 id="agy-setup-title">Conecte seu Antigravity</h2>
+        <p class="setup-intro">
+          Você entra diretamente no Google. Este site não recebe sua senha,
+          chave ou token.
+        </p>
+        <ol class="setup-steps">
+          <li>
+            <strong>Entre com Google.</strong>
+            Abriremos o <code>agy</code> oficial, que inicia o login no
+            navegador.
+          </li>
+          <li>
+            <strong>Volte para cá.</strong>
+            Depois do login, confirme abaixo para liberar somente a leitura
+            desta wiki.
+          </li>
+        </ol>
+        <p
+          id="agy-setup-feedback"
+          class="setup-feedback"
+          role="status"
+          aria-live="polite"
+        ></p>
+        <div id="agy-command-wrap" class="setup-command" hidden>
+          <code id="agy-command"></code>
+          <button id="copy-agy-command" type="button">Copiar</button>
+        </div>
+        <div class="setup-actions">
+          <button id="start-agy-login" class="setup-primary" type="button">
+            Conectar com Google
+          </button>
+          <button
+            id="complete-agy-login"
+            class="secondary-button"
+            type="button"
+          >
+            Já concluí o login
+          </button>
+        </div>
+        <button id="later-agy-setup" class="setup-later" type="button">
+          Agora não
+        </button>
+      </section>
     </div>
 
     <script

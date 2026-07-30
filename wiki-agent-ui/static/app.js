@@ -16,6 +16,16 @@ const attachPdfButton = document.querySelector("#attach-pdf");
 const pdfInput = document.querySelector("#pdf-input");
 const attachmentTray = document.querySelector("#attachment-tray");
 const attachmentStatus = document.querySelector("#attachment-status");
+const connectEngineButton = document.querySelector("#connect-engine");
+const agySetup = document.querySelector("#agy-setup");
+const closeAgySetupButton = document.querySelector("#close-agy-setup");
+const laterAgySetupButton = document.querySelector("#later-agy-setup");
+const startAgyLoginButton = document.querySelector("#start-agy-login");
+const completeAgyLoginButton = document.querySelector("#complete-agy-login");
+const agySetupFeedback = document.querySelector("#agy-setup-feedback");
+const agyCommandWrap = document.querySelector("#agy-command-wrap");
+const agyCommand = document.querySelector("#agy-command");
+const copyAgyCommandButton = document.querySelector("#copy-agy-command");
 
 let history = [];
 let busy = false;
@@ -72,10 +82,37 @@ function finishViewerResize(event) {
   event?.preventDefault();
 }
 
+function selectedEngineState() {
+  return healthState?.engines?.find(
+    (candidate) => candidate.id === engineSelect.value,
+  );
+}
+
+function showAgySetup(message = "") {
+  agySetupFeedback.textContent = message;
+  agySetupFeedback.className = "setup-feedback";
+  agyCommandWrap.hidden = true;
+  agySetup.hidden = false;
+  startAgyLoginButton.focus();
+}
+
+function hideAgySetup() {
+  agySetup.hidden = true;
+  input.focus();
+}
+
+function showAgyCommand(command) {
+  agyCommand.textContent = command || "agy";
+  agyCommandWrap.hidden = false;
+}
+
 function updateEngineStatus() {
   if (!healthState) return;
-  const engine = healthState.engines?.find(
-    (candidate) => candidate.id === engineSelect.value,
+  const engine = selectedEngineState();
+  connectEngineButton.hidden = !(
+    engineSelect.value === "antigravity" &&
+    engine?.ready &&
+    engine.setupRequired
   );
   if (!engine?.ready) {
     const unavailableMessages = {
@@ -86,7 +123,41 @@ function updateEngineStatus() {
     setStatus(unavailableMessages[engineSelect.value], "error");
     return;
   }
+  if (engineSelect.value === "antigravity" && engine.setupRequired) {
+    setStatus("Antigravity pronto para conectar", "error");
+    return;
+  }
   setStatus(`${healthState.documents} páginas · ${engine.label}`, "ready");
+}
+
+async function loadHealth({ openSetup = false } = {}) {
+  const response = await fetch("/api/health");
+  const health = await response.json();
+  healthState = health;
+  for (const option of engineSelect.options) {
+    const engine = health.engines?.find(
+      (candidate) => candidate.id === option.value,
+    );
+    option.disabled = engine ? !engine.ready : false;
+  }
+  if (!health.ready) {
+    setStatus(health.wikiError || "Wiki indisponível", "error");
+    return health;
+  }
+  const selectedOption = engineSelect.selectedOptions[0];
+  if (selectedOption.disabled) {
+    const firstReady = health.engines?.find((engine) => engine.ready);
+    if (firstReady) engineSelect.value = firstReady.id;
+  }
+  updateEngineStatus();
+  if (
+    openSetup &&
+    engineSelect.value === "antigravity" &&
+    selectedEngineState()?.setupRequired
+  ) {
+    showAgySetup();
+  }
+  return health;
 }
 
 function escapeHtml(value) {
@@ -649,6 +720,13 @@ function closeViewer() {
 
 async function ask(message) {
   if (busy || !message.trim()) return;
+  if (
+    engineSelect.value === "antigravity" &&
+    selectedEngineState()?.setupRequired
+  ) {
+    showAgySetup("Conecte o Antigravity antes de enviar a pergunta.");
+    return;
+  }
   busy = true;
   sendButton.disabled = true;
   engineSelect.disabled = true;
@@ -722,6 +800,16 @@ async function ask(message) {
   } catch (error) {
     activity.remove();
     addMessage("assistant", `**Erro:** ${error.message}`);
+    if (
+      selectedEngine === "antigravity" &&
+      /(auth|login|sign.?in|signed.?out|autentic|credential|oauth)/i.test(
+        error.message,
+      )
+    ) {
+      showAgySetup(
+        "A sessão não está disponível. Faça o login oficial e tente novamente.",
+      );
+    }
   } finally {
     busy = false;
     sendButton.disabled = false;
@@ -804,7 +892,12 @@ window.addEventListener("resize", () => {
   }
 });
 document.addEventListener("keydown", (event) => {
-  if (event.key === "Escape" && !viewer.hidden) closeViewer();
+  if (event.key !== "Escape") return;
+  if (!agySetup.hidden) {
+    hideAgySetup();
+  } else if (!viewer.hidden) {
+    closeViewer();
+  }
 });
 
 newChatButton.addEventListener("click", () => {
@@ -828,29 +921,95 @@ newChatButton.addEventListener("click", () => {
   input.focus();
 });
 
-engineSelect.addEventListener("change", updateEngineStatus);
+engineSelect.addEventListener("change", () => {
+  updateEngineStatus();
+  if (
+    engineSelect.value === "antigravity" &&
+    selectedEngineState()?.setupRequired
+  ) {
+    showAgySetup();
+  }
+});
 
-fetch("/api/health")
-  .then((response) => response.json())
-  .then((health) => {
-    healthState = health;
-    for (const option of engineSelect.options) {
-      const engine = health.engines?.find(
-        (candidate) => candidate.id === option.value,
-      );
-      option.disabled = engine ? !engine.ready : false;
+connectEngineButton.addEventListener("click", () => showAgySetup());
+closeAgySetupButton.addEventListener("click", hideAgySetup);
+laterAgySetupButton.addEventListener("click", hideAgySetup);
+agySetup.addEventListener("click", (event) => {
+  if (event.target === agySetup) hideAgySetup();
+});
+
+startAgyLoginButton.addEventListener("click", async () => {
+  startAgyLoginButton.disabled = true;
+  agySetupFeedback.textContent = "Abrindo o login oficial…";
+  agySetupFeedback.className = "setup-feedback";
+  agyCommandWrap.hidden = true;
+  try {
+    const response = await fetch("/api/setup/antigravity/start", {
+      method: "POST",
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.detail || "Não foi possível abrir o login.");
     }
-    if (health.ready) {
-      const selectedOption = engineSelect.selectedOptions[0];
-      if (selectedOption.disabled) {
-        const firstReady = health.engines?.find((engine) => engine.ready);
-        if (firstReady) engineSelect.value = firstReady.id;
-      }
-      updateEngineStatus();
-      return;
+    agySetupFeedback.textContent = payload.message;
+    agySetupFeedback.className = payload.launched
+      ? "setup-feedback ready"
+      : "setup-feedback error";
+    if (!payload.launched) showAgyCommand(payload.command);
+  } catch (error) {
+    agySetupFeedback.textContent = error.message;
+    agySetupFeedback.className = "setup-feedback error";
+  } finally {
+    startAgyLoginButton.disabled = false;
+  }
+});
+
+completeAgyLoginButton.addEventListener("click", async () => {
+  completeAgyLoginButton.disabled = true;
+  agySetupFeedback.textContent = "Preparando a wiki em modo somente leitura…";
+  agySetupFeedback.className = "setup-feedback";
+  try {
+    const response = await fetch("/api/setup/antigravity/complete", {
+      method: "POST",
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(payload.detail || "Não foi possível concluir.");
     }
-    setStatus(health.wikiError || "Wiki indisponível", "error");
-  })
-  .catch(() => setStatus("Servidor indisponível", "error"));
+    await loadHealth();
+    agySetupFeedback.textContent = payload.message;
+    agySetupFeedback.className = "setup-feedback ready";
+    window.setTimeout(hideAgySetup, 550);
+  } catch (error) {
+    agySetupFeedback.textContent = error.message;
+    agySetupFeedback.className = "setup-feedback error";
+  } finally {
+    completeAgyLoginButton.disabled = false;
+  }
+});
+
+copyAgyCommandButton.addEventListener("click", async () => {
+  const command = agyCommand.textContent;
+  try {
+    await navigator.clipboard.writeText(command);
+  } catch {
+    const temporary = document.createElement("textarea");
+    temporary.value = command;
+    temporary.style.position = "fixed";
+    temporary.style.opacity = "0";
+    document.body.appendChild(temporary);
+    temporary.select();
+    document.execCommand("copy");
+    temporary.remove();
+  }
+  copyAgyCommandButton.textContent = "Copiado";
+  window.setTimeout(() => {
+    copyAgyCommandButton.textContent = "Copiar";
+  }, 1200);
+});
+
+loadHealth({ openSetup: true }).catch(() => {
+  setStatus("Servidor indisponível", "error");
+});
 
 resizeInput();
