@@ -6,31 +6,90 @@ wiki.
 
 ## Testar a branch `dev`
 
+O caminho recomendado é `uv`:
+
 ```bash
 git clone --branch dev https://github.com/cnpem/sci-ai-wiki.git
 cd sci-ai-wiki/wiki-agent-ui
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+uv sync --frozen
 cp .env.example .env
 ```
 
 Edite `WIKI_PATH` no `.env` e execute:
 
 ```bash
-python app.py
+uv run python app.py
 ```
 
 Acesse <http://127.0.0.1:8000>. Se escolher Antigravity, o próprio site guia
-o login oficial. Para confirmar a instalação, rode `pytest -q`.
+o login oficial. Para confirmar a instalação, rode `uv run pytest -q`.
+
+Poetry também é recomendado e `pip` continua disponível como fallback. Os
+comandos equivalentes estão na seção de instalação.
 
 ## Fase 1 — instalar
 
-Requisitos básicos: Python 3.11 ou mais recente e pelo menos um dos motores:
+Requisitos básicos: Python 3.11 ou mais recente, um gerenciador de dependências
+e pelo menos um dos motores:
 
 - Antigravity CLI instalado; o login pode ser feito pelo site; ou
 - OpenCode e Ollama instalados, com o modelo configurado já disponível; ou
 - Codex CLI instalado e autenticado com `codex login`.
+
+Use preferencialmente:
+
+1. **uv** — opção mais direta e rápida; cria o `.venv` e pode instalar um
+   Python compatível automaticamente.
+2. **Poetry 2.x** — recomendado para quem já usa o fluxo Poetry e seu
+   lockfile.
+3. **pip** — fallback universal, mantido para ambientes tradicionais.
+
+`pyproject.toml` é a fonte principal das dependências. `uv.lock` e
+`poetry.lock` garantem instalações reproduzíveis em seus respectivos fluxos;
+`requirements.txt` mantém a compatibilidade com `pip`.
+
+### Instalar uv
+
+macOS ou Linux:
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+uv --version
+```
+
+No macOS, também é possível usar Homebrew:
+
+```bash
+brew install uv
+```
+
+Windows PowerShell:
+
+```powershell
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+uv --version
+```
+
+Consulte a [instalação oficial do uv](https://docs.astral.sh/uv/getting-started/installation/).
+
+### Instalar Poetry
+
+macOS, Linux ou Windows com WSL:
+
+```bash
+curl -sSL https://install.python-poetry.org | python3 -
+poetry --version
+```
+
+Windows PowerShell:
+
+```powershell
+(Invoke-WebRequest -Uri https://install.python-poetry.org -UseBasicParsing).Content | py -
+poetry --version
+```
+
+Outra opção multiplataforma é `pipx install poetry`. Consulte a
+[instalação oficial do Poetry](https://python-poetry.org/docs/#installation).
 
 ### Instalar Antigravity CLI
 
@@ -103,21 +162,53 @@ $env:OPENAI_API_KEY | codex login --with-api-key
 Não coloque a chave no `.env` deste projeto e não a compartilhe. O app usa a
 sessão que o Codex CLI salvou localmente.
 
-### macOS ou Linux
+### Instalar as dependências
+
+Escolha apenas um dos fluxos abaixo.
+
+#### Opção recomendada: uv
+
+```bash
+uv sync --frozen
+cp .env.example .env
+```
+
+No Windows PowerShell, substitua o último comando por:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Não é necessário ativar o ambiente virtual. `uv run` executa cada comando no
+ambiente correto e verifica se ele continua sincronizado com o lockfile.
+
+#### Opção recomendada: Poetry
+
+```bash
+poetry install
+cp .env.example .env
+```
+
+No Windows PowerShell, use `Copy-Item .env.example .env`. Execute o app e os
+testes com `poetry run`.
+
+#### Fallback: pip
+
+macOS ou Linux:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 cp .env.example .env
 ```
 
-### Windows (PowerShell)
+Windows PowerShell:
 
 ```powershell
 py -m venv .venv
 .\.venv\Scripts\Activate.ps1
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 Copy-Item .env.example .env
 ```
 
@@ -141,6 +232,20 @@ Critério de sucesso: `WIKI_PATH` contém `GEMINI.md`, `.agents/skills/` e
 `wiki/`; `GET /api/health` informa `"ready": true`.
 
 ## Fase 2 — executar
+
+Com `uv`:
+
+```bash
+uv run python app.py
+```
+
+Com Poetry:
+
+```bash
+poetry run python app.py
+```
+
+Com o ambiente `pip` ativado:
 
 ```bash
 python app.py
@@ -171,9 +276,14 @@ Critério de sucesso: a página mostra o total de páginas, o status
 
 ## Fase 3 — verificar
 
+Com `uv`:
+
 ```bash
-pytest -q
+uv run pytest -q
 ```
+
+Com Poetry, use `poetry run pytest -q`. Com o ambiente `pip` ativado, use
+`pytest -q`.
 
 Os testes cobrem indexação local, bloqueio de caminhos, onboarding do
 Antigravity, preservação das configurações, anexos PDF e conversas simuladas.
@@ -236,14 +346,15 @@ arquivos Markdown.
 
 1. Clone a branch `dev` e disponibilize a pasta da wiki, sem copiar o arquivo
    `.env`.
-2. Instale Python e pelo menos um dos três motores.
+2. Instale `uv` ou Poetry (recomendados), ou use Python + `pip`; instale também
+   pelo menos um dos três motores.
 3. Crie o `.env` local e configure `WIKI_PATH`.
 4. O colega autentica o motor com a própria conta:
    - Antigravity: abra o site e use **Conectar com Google**.
    - Codex com assinatura ChatGPT: execute `codex login`.
    - Codex com API: `printenv OPENAI_API_KEY | codex login --with-api-key`.
    - OpenCode + Ollama: não exige conta externa; o modelo roda localmente.
-5. Execute `python app.py`.
+5. Instale e execute com um dos três fluxos documentados acima.
 
 Nunca copie `~/.codex/auth.json`, chaves de API ou arquivos de login. Cada
 usuário deve criar a própria sessão local.
@@ -255,8 +366,11 @@ abrir programas na máquina hospedeira.
 Para acesso por outros dispositivos da mesma rede, rode:
 
 ```bash
-uvicorn app:app --host 0.0.0.0 --port 8000
+uv run uvicorn app:app --host 0.0.0.0 --port 8000
 ```
+
+Com Poetry, troque `uv run` por `poetry run`. Com o ambiente `pip` ativado,
+execute o comando a partir de `uvicorn`.
 
 Isso expõe o chat na rede local sem autenticação. Use apenas em uma rede
 confiável; para internet pública, adicione autenticação e HTTPS.

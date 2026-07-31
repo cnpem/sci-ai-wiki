@@ -1,3 +1,4 @@
+import tomllib
 from pathlib import Path
 
 from fastapi.testclient import TestClient
@@ -20,6 +21,26 @@ def make_wiki(tmp_path: Path) -> Path:
         encoding="utf-8",
     )
     return tmp_path
+
+
+def test_requirements_match_pyproject_dependencies():
+    project_root = Path(__file__).parents[1]
+    project = tomllib.loads(
+        (project_root / "pyproject.toml").read_text(encoding="utf-8")
+    )
+    declared = {
+        *project["project"]["dependencies"],
+        *project["dependency-groups"]["dev"],
+    }
+    requirements = {
+        line.strip()
+        for line in (project_root / "requirements.txt")
+        .read_text(encoding="utf-8")
+        .splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+
+    assert requirements == declared
 
 
 def test_health_reports_antigravity_without_exposing_secrets(
